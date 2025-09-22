@@ -1,0 +1,64 @@
+rm(list = ls())
+
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(ggrepel)
+library(reshape2)
+library(magrittr)
+library(data.table)
+
+crispr = read_excel("./inputs/invasive_contstructive_reactive_deltaBF_TKO.xlsx", col_names = TRUE) %>% as.data.frame() 
+soxTFs <- crispr$gene[grep("^SOX", crispr$gene)]
+klfTFs <- crispr$gene[grep("^KLF", crispr$gene)]
+
+rfxTFs <- crispr$gene[grep("^RFX", crispr$gene)]
+vaxTFs <- crispr$gene[grep("^VAX2", crispr$gene)]
+lhxTFs <- crispr$gene[grep("^LHX2", crispr$gene)]
+
+salTFs <- crispr$gene[grep("^SALL2", crispr$gene)]
+vaxTFs <- crispr$gene[grep("^VAX2", crispr$gene)]
+
+heyTFs <- crispr$gene[grep("^HEY2", crispr$gene)]
+asclTFs <- crispr$gene[grep("^ASCL", crispr$gene)]
+
+pouTFs <- crispr$gene[grep("^POU", crispr$gene)]
+oliTFs <- crispr$gene[grep("^OLIG", crispr$gene)]
+
+
+altTFs <- data.frame(ptf = c("POU3F3",  "POU4F1",  "POU5F2",  "POU6F2",  "POU2F1",  "POU3F4",  "POU2F3",  "POU2F2",  "POU4F3",  "POU1F1", "POU4F2", "POU3F1", "POU6F1", "POU3F2", "POU2AF1"),
+                     otf = c("BRN1",   "BRN3A",    "POU5F2",  "RPF-1",   "OCT1",    "BRN4",    "OCT11",   "OCT2",    "BRN3C",   "PIT1",   "BRN3B",  "OCT6",   "BRN5",   "OCT7",   "OBF1"))
+
+tfs <- c(soxTFs, klfTFs, pouTFs, rfxTFs, vaxTFs, salTFs, vaxTFs, heyTFs, asclTFs, oliTFs)
+
+crispr <- crispr %>% filter(gene %in% tfs) %>% select(gene:G361) 
+dim(crispr)
+
+#for(i in 1:dim(crispr)[1]){
+#  if(crispr$gene[i] %in% altTFs$ptf){
+#    crispr$gene[i] <- altTFs$otf[which(altTFs$ptf == crispr$gene[i])]
+#  }
+#}
+
+#---- highlight the G523, G583, G649 and G620
+crispr <- crispr %>% dplyr::select(gene, G523, G583, G549, G620)
+crispr.df <- reshape2::melt(crispr, id.vars = "gene") %>% magrittr::set_colnames(c("gene", "cellline", "essentiality"))
+crispr.df$TFlabels <- ifelse(crispr.df$essentiality > 0, crispr.df$gene, "")
+
+p1 <- ggplot(crispr.df, aes(x = cellline, y = essentiality, fill = cellline)) + theme_bw() +
+  geom_violin(color = "blue") +
+  geom_point(position = position_jitter(seed = 1, width = 0.1), data = crispr.df[which(crispr.df$essentiality < 0), ], aes(x = cellline, y = essentiality), colour="black") +
+  geom_point(position = position_jitter(seed = 1, width = 0.1), data = crispr.df[which(crispr.df$essentiality > 0), ],  aes(x = cellline, y = essentiality), colour="red") + 
+  geom_text_repel(aes(label = TFlabels)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, colour = "black"),
+        axis.text.y = element_text(color = "black"),
+        panel.grid = element_blank()) + 
+  xlab("") + ylab("qBF score for TF") 
+
+p1
+
+
+
+

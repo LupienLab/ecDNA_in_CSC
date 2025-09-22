@@ -1,0 +1,26 @@
+#******** Chapter 2: create a umap plot ********#
+rm(list = ls())
+library(ArchR)
+library(Seurat)
+#******** Chapter 2: create a umap plot ********#
+rm(list = ls())
+library(ArchR)
+library(Seurat)
+library(SeuratObject)
+install.packages("Matrix")
+library(Matrix)
+#******** Chapter 2: create a umap plot ********#
+rm(list = ls())
+library(ArchR)
+library(Seurat)
+package_version("Seurat")
+package_version(Seurat)
+package_version(ArchR)
+package.version(ArchR)
+package.version("ArchR")
+package.version("Seurat")
+library(ArchR) #package.version("ArchR")
+remotes::install_version("SeuratObject", "4.1.4", repos = c("https://satijalab.r-universe.dev", getOption("repos")))
+rm -rf /Library/Frameworks/R.framework/Versions/4.2/Resources/library/00LOCK-SeuratObject
+install.packages("remotes")  # If not already installed
+remotes::install_version("SeuratObject", "4.1.4", repos = c("https://satijalab.r-universe.dev", getOption("repos")))

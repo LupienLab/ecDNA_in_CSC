@@ -1,0 +1,47 @@
+#******** Chapter 3: extract cell per cluster ********#
+
+rm(list = ls())
+
+library(ArchR) # packageVersion("ArchR") 1.0.2
+library(Seurat) # packageVersion("Seurat") 4.4.0
+library(tidydr)
+library(dplyr)
+library(data.table)
+library(mascarade)
+library(caret)
+library(knitr)
+
+library(BSgenome.Hsapiens.UCSC.hg38)
+set.seed(2024)
+
+addArchRGenome("hg38")
+addArchRThreads(threads = floor(parallel::detectCores()/2), force = F)
+
+id = "G900"
+n = 1
+
+proj <- readRDS(paste0("./outputs.", id, "/", id, ".proj.rds"))
+proj <- addImputeWeights(proj, threads = 1)
+
+#~~~ get gene activity score matrix
+matrixs <- getMatrixFromProject(proj)
+genescoreMatrix <- matrixs@assays@data$GeneScoreMatrix 
+metacluster <- data.frame(barcode = gsub(paste0(id, "#"), "", proj$cellNames), cluster = proj$Clusters)
+
+cluster_barcode_list <- split(metacluster$barcode, metacluster$cluster)
+
+lapply(names(cluster_barcode_list), function(clust) {
+  filename <- paste0(id, "_", clust, "_barcodes.txt")
+  writeLines(cluster_barcode_list[[clust]], con = paste0("./results.intra/", id, "/", filename))
+})
+
+write.table(metacluster, file = paste0("outputs.", id, "/", id, ".metacluster.txt"), row.names = F, col.names = F, sep = "\t", quote = F)
+
+
+
+library(RColorBrewer)
+c(brewer.pal(12, "Paired"))
+pal = c("G958" = "purple", "G946" = "orchid", "G933" = "orange", "A7TK" = "salmon", "G900" = "yellowgreen", "G837" = "olivedrab", "G797" = "navy", "AA9S" = "darkgreen")
+
+
+

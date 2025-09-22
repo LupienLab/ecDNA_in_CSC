@@ -1,0 +1,112 @@
+rm(list = ls())
+
+library(dplyr)
+library(stringr)
+library(data.table)
+library(JunJunZai)
+
+id = "G523-1"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("", "ETS:E-box", "SOX3,Sox11,Sox4,RUNX1,Sox2,Sox6", "Smad3,Smad4", "ETS:E-box,ETS,Etv2",                                            #5
+                         "Twist2", "", "POU5F1B,Oct6,POU2F2,POU2F1", "Klf12", "NFATC1,NFATC3,SPIB,ETS",                                                       #10
+                         "SOX10,Sox21,Sox14,Sox12,Hoxd13,Hoxd10", "SNAI2", "POU6F2,Atf1,HOXC13", "POU3F2,Tcf7,CEBPG,Klf7", "TFAP2E,SOX3,SOX4,SOX11"          #15
+                        ))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G549-1"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("Stat5a::Stat5b,STAT5", "SOX10", "SOX10", "Tcfap2c,TFAP2A,Lhx8", "FOXD1",                                           #5
+                         "AP2,BATF::JUN,FOSL2,FOSL1", "KLF10,Smad3,Smad4,Fox:Ebox", "Gata5,Hoxc9,Tcf7", "Pou4f3", "",                          #10
+                         "HIF1a", "Rfx4,Gata5,Gata4,GATA3,Gata1", "Twist2", "Klf7,RUNX2,Smad3,Klf4", "Sp1",                           #15
+                         "AP2,TFAP2A,TFAP2B,TFAP2C", "Sox5", "TFAP2B,TFAP2E,TFAP2A,TFAP2C,AP2", "NRF1", "NRF1,ZEB1",                        #20
+                         "Gata4,MITF", "Pax6,STAT1::STAT2,", "", "Pax7,PAX3", "Tcfe2a,SREBF2",                                      #25
+                         "RUNX2", "Rfx4,HIF2a,HIF1a,GATA3,HIF1b", "SOX10,Sox14,Sox10,Sox6,Sox3,SOX9", "NR2F1", "Hoxa11,HOXC12,HOXD12,HOXC11,HOXD11,HOXC13,Hoxa13",              #30
+                         "HOXA5,POU6F2,Pou4f3,Pou6f1", "E2F6,E2F4,E2F7", "", "KLF16,SP8,SP3,KLF14,Klf9,SP4", "E2F6",                                       #35
+                         "Rfx5,Rfx4", "NFIA,Rfx4,CEBP,CEBPB,CEBPE", "NFATC3,NFATC1,CEBPB,CEBPD,CEBPE,CEBPG,NFATC2,SPIB", "E2F4,E2F6", "Nanog,Hoxb4,Hoxb8",                      #40
+                         "Tcfe2a", "Hoxa13,HOXC13,HIF2a,HIF1A", "SOX4,Tcf1,HOXA10,Sox11"))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G583-1"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("E2F6,E2F1,E2F7,E2F4,NFATC2,E2F8", "RUNX1,RUNX2", "", "FOS::JUN,AP1,Fosl2", "SOX3,Sox6,Sox2,Sox12,Sox4,Sox10",                         #5
+                         "ETS,E2F6,ETS1", "RUNX1,RUNX,CEBPA,RUNX2,Sox17", "", "Pax2,PAX5,Sox17", "GATA3,GATA5,GATA4,GATA2,GATA6,GATA1",             #10
+                         "Sox8,SOX10,Pou5f1::Sox2,SOX6"))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G583-2"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("SNAI2,TCF3,TCF4,ZEB1,ID4,TFAP2A", "", "", "ETS,ETV6", "GATA3,Gata4,Gata2,Gata1,ZEB1",                      #5
+                         "", "Atf2,Atf7,Tcf3,TCF4", "SMAD3,Rfx5,Rfx1,ETS:E-box", "CEBP:AP1,Sox4,SOX10,PAX5,Rfx5", "",                 #10
+                         "", "Sox17,Sox1", "NFATC2,TFAP2E,NFATC3,NFATC1,Sox4,Sox11", "", "TFAP2E,Tcf3,Mtf1",               #15
+                         "", "POU6F2", "E2F3,E2F2", "ZEB1,TCF4,TCF3,ID4,SNAI2"                                                        #19
+                         ))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G583-3"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("SP1,SP2", "ZEB1,TCF4,ID4,TCF3", "HOXA5,ETV2,ETV3,ERG,ETS", "CEBPA", "HOXA2",                                                             #5
+                         "Klf7,Klf12", "Tcf4,Tcf3,Tcf7", "Sox6,Sox11,Sox4,Sox3,Sox10,Sox15", "Atf2,Atf7,CREB1,c-Jun-CRE,JUND,Atf1", "Tcfap2e,SOX11,Sox4,Hoxd10",                 #10
+                         "Sox1,Sox17", "c-JUN,Hoxb8,Hoxd9,Sox5", "Pax7", "NFATC3,NFATC1,NFAT5,Etv2,NFATC2,ETS,Stat4", "Smad2,Stat5a::Stat5b,Smad4,Smad3,STAT3",     #15
+                         "Tcf21,Tcf12,Ap4", "Klf4,KLF5,KLF1", "", "TFAP2E,Tcf3,Mtf1"))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+
+#~~~
+id = "G620-1"
+
+motif_files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+motif_table <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif_files))@'novo res'
+alter_motifs <- toupper(c("HOXD12,HOXC11,Hoxa11,HOXD11,Hoxc11,Hoxa11,HOXC12,Atf1,Hoxc10", "", "Hoxc9,HOXA9", "bHLH,POU6F2,Pou6f1", "KLF10,Klf9,SP8,SP3",        #5
+                         "Hoxa3", "Ascl2,Ascl1,Tcfe2a", "AP4", "Sox6,Sox15,Sox14,Sox2,Sox17,Sox3,Sox10,Sox9", "CEBPE,CEBP,CEBPB,CEBPG,CEBPD,CEBPA",                   #10
+                         "POU3F3,NFAT", "Rfx4,Rfx5,Rfx1,Rfx3", "", "", "Hoxd11,Hoxd12,ETV6",                                                                             #15
+                         "Eomes,TCF3,TCF4", "", "", "E2F3,ETS:E-box,E2F2", "Mtf1",                                                                  #20
+                         "RUNX,RUNX2,RUNX1,Klf4", "RUNX2,RUNX1", "Oct4,POU2F2,Sox17,POU5F1B,Oct6", "Atf1,Sox7,Sox21,Sox8,Sox30,Sox9,Sox2", "Pax6,Hoxc5,POU6F1,LHX6,LHX2,Hoxa4",      #25
+                         "RUNX,Rfx5,RUNX2,RUNX1,SREBF2,SREBF1", "SPIB,CEBP,ETS,CEBPB,CEBPE", "Hoxd10,Hoxd13,Hoxb13,Hoxa10,Sox14,HOXC12", "Sox3,Sox12,Sox6,Sox14,Sox4,SOX10"          #30
+                         ))
+
+motif_df <- motif_table %>% mutate(motif = alter_motifs)
+motif_df <- motif_df %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(motif_df, file = paste0("./outputs/", id, ".motif.RData"))
+
+

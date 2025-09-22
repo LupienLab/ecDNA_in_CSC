@@ -1,0 +1,52 @@
+rm(list = ls())
+
+library(MASS)    # For kde2d
+library(ggplot2) # For visualization
+library(dplyr)   # For data manipulation
+
+set.seed(123)
+
+# Load overlap data
+pca_df <- readRDS(file = paste0("outputs/pca_df.rds"))
+overlap_df <- readRDS(file = paste0("outputs/overlap_points.rds"))
+
+pca_df <- table(pca_df$type, pca_df$sample) %>% as.data.frame() %>% {colnames(.) = c("type", "sample", "overallcount");. }
+overlap_df <- table(overlap_df$type, overlap_df$sample) %>% as.data.frame() %>% {colnames(.) = c("type", "sample", "overlapcount");. }
+
+df <- full_join(pca_df, overlap_df, by = c("type", "sample")) %>% mutate(percentage = overlapcount/overallcount) %>% filter(!is.na(percentage))
+df.GBM <- df %>% filter(type == "GBM")
+df.GSC <- df %>% filter(type == "GSC")
+df.GBM$sample <- factor(df.GBM$sample, levels = c("G958", "G946", "G933", "A7TK", "AA9S", "G900", "G797", "G837"))
+df.GSC$sample <- factor(df.GSC$sample, levels = c("G523", "G583", "G620", "G828", "G797", "G837"))
+
+pdf(paste0("./overlapping/CSC_in_GBM.pdf"), width = 4, height = 4)
+
+ggplot(df.GBM, aes(x = sample, y = percentage, fill = "custom")) +
+  theme_bw() +
+  geom_bar(stat = "identity", color = "black", width = 0.9) +  
+  geom_text(aes(label = paste0(overlapcount, "(", round(percentage *100, 2), "%)")), vjust = 0.35, size = 4, angle = 90, hjust = -0.1) +  
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_fill_manual(values = c("custom" = "orange")) +
+  labs(x = NULL, y = "Percentage", fill = "Sample") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.y = element_text(colour = "black"),
+        legend.position = "none",
+        panel.grid.minor = element_blank(), panel.grid.major = element_blank())  
+
+dev.off()
+
+pdf(paste0("./overlapping/CSC_in_GSC.pdf"), width = 4, height = 4)
+
+ggplot(df.GSC, aes(x = sample, y = percentage, fill = "custom")) +
+  theme_bw() +
+  geom_bar(stat = "identity", color = "black", width = 0.9) +  
+  geom_text(aes(label = paste0(overlapcount, "(", round(percentage *100, 2), "%)")), vjust = 0.35, size = 4, angle = 90, hjust = -0.1) +  
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_fill_manual(values = c("custom" = "orange")) +
+  labs(x = NULL, y = "Percentage of cancer stem cells in GSC", fill = "Sample") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.y = element_text(colour = "black"),
+        legend.position = "none",
+        panel.grid.minor = element_blank(), panel.grid.major = element_blank())  
+dev.off()
+

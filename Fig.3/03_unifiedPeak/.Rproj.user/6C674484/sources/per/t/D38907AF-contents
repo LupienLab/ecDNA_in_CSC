@@ -1,0 +1,9 @@
+
+rm(list = ls())
+
+#Summit lists
+path1="./G549"
+outSummitList1 <- list.files(path1, pattern = "^G.[0-9]._hg38$", full.names = TRUE)
+outSummitList1
+
+

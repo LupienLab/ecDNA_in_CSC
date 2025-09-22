@@ -1,0 +1,65 @@
+source("./librarys.R")
+
+addWhereAreCNVsGenome("hg38")
+############创建h5文件同时加入TileMat、GeneScoreMat##############
+WhereAreCNVsFiles <- createh5File(
+  inputFiles = "./inputs/G958/cpan.fragments.tsv.gz",
+  sampleNames = "G958",
+  filteredCellNames = "./G958.outputs/filteredCell/filteredcells.txt",
+  addTileMat = TRUE,
+  addGeneScoreMat = TRUE,
+  force = TRUE
+)
+WhereAreCNVsFiles <- "./G958.outputs/h5File/G958.h5"
+############生成proj##############
+WhereAreCNVsProj <- WhereAreCNVsProject(
+  h5File = WhereAreCNVsFiles,
+  copyH5s = FALSE,
+  geneAnnotation = getGeneAnnotation(),
+  genomeAnnotation = getGenomeAnnotation(),
+  threads = 1
+)
+# WhereAreCNVsProj <- WhereAreCNVsProject(
+#   h5File = WhereAreCNVsFiles,
+#   geneAnnotation = getGeneAnnotation(),
+#   genomeAnnotation = getGenomeAnnotation(),
+#   threads = 1
+# )
+
+############获得矩阵##############
+geneExpressionMatrix <- getMatrixFromProject(
+  WhereAreCNVsProj, 
+  useMatrix = "GeneScoreMatrix" 
+)
+TileMatrix <- getMatrixFromProject(
+  WhereAreCNVsProj, 
+  useMatrix = "TileMatrix",
+  binarize = TRUE
+)
+
+############寻找正常细胞##############
+addWhereAreCNVsCancer(cancer = "GBM")
+WhereAreCNVsProj <- findNormalCells(WhereAreCNVsProj, plotInflection = TRUE)
+#第二种方法
+#onco_genes <- c("MDM2" ,"CDK4", "EGFR")
+#WhereAreCNVsProj <- findNormalCells(WhereAreCNVsProj ,oncogene = onco_genes, plotInflection = TRUE)
+##########################################
+WhereAreCNVsProj@cellColData
+WhereAreCNVsProj@cellColData[as.vector(WhereAreCNVsProj@cellColData$normalCells),]
+
+
+#我把寻找peak和前面分开了我认为前面寻找正常细胞的步骤和这一步并不连接，而且这个用的方法也是外部的如果电脑没有环境，
+#或者没有需求可以不使用该部分代码，如果加入createh5File会时改步骤更长时间，还有这样做函数好写一点
+
+
+peaks <- RunMACS2(H5FilePath = geth5File(WhereAreCNVsProj), 
+                  pathToMacs2 = "/home/ww/miniconda3/envs/macs/bin/macs2",
+                  qval = "1e-3")
+
+WhereAreCNVsProj <- addPeakScoreMat(h5File = geth5File(WhereAreCNVsProj), peaks = peaks)
+
+PeakScoreMatrix <- getMatrixFromProject(
+  WhereAreCNVsProj, 
+  useMatrix = "PeakScoreMatrix" 
+)
+

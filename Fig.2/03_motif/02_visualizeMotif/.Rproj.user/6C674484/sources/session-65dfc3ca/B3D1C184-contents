@@ -1,0 +1,137 @@
+rm(list = ls())
+
+library(dplyr)
+library(stringr)
+library(data.table)
+library(JunJunZai)
+
+id = "A7TK-1"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("", "EOMES,Klf7", "", "Klf1,Klf4", "",                             #5
+                         "Tcf1", "", "POU3F4", "Pou3f3", "",                                                 #10
+                         "", "", "", "", "",                  #15
+                         "KLF13,KLF14,KLF16", "Sox2,SOX9,", "", "Klf12", "",                                 #20
+                         "", "", "RUNX2,Gata6", "ZEB1,KLF10,Sox13", "RUNX3,RUNX",           #25
+                         "", "", "", "STAT6,Rfx5", "",                                                   #30
+                         "Tcfap2e", "Rfx3", "", "Gata5", "Sox17",                                      #35
+                         "SNAI2", "Tcf3,Tcf4,Tcf7,SOX15,TCF4", "", "", "",                           #40
+                         "KLF5"))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs) 
+dim(hr.ecDNA)
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+dim(hr.ecDNA)
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "A7TK-2"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("Otx2", "", "TFAP2A,TFAP2B", "SOX8", "",                            #5
+                         "", "", "Klf7", "Rfx4", "",                         #10
+                         "Sox13", "", "", "", "HES7,HES5",                      #15
+                         "SOX10", "ZEB1,TCF4,TCF3,SNAI2", "GATA3", "", "Tcfap2e,Sox4"))               
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G933-1"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("", "Tcfap2e,Rfx3", "TFAP2C,TFAP2B,TFAP2A", "", "Sox2,Sox3,Sox9,Sox10,Sox6,Sox11,Sox4",  #5
+                         "RUNX2,Hand1::Tcf3", "KLF5,KLF7,Ascl2", "Sox12,Sox7", ""))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G933-2"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("Tcfap2b,TFAP2C,TFAP2A", "Ascl2,Oct2", "", "", "Lhx3,Lhx1",    #5
+                         "STAT3,", "Eomes,Klf12", "Sox17,Sox10,SOX6", "RUNX2,RUNX1,RUNX,RUNX3,KLF10", ""))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+#~~~
+id = "G933-3"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("", "Rfx1,RFX5,RFX2", "Tcf7,Sox15", "", "SOX8",                                             #5
+                         "Sox5,SOX21,SOX13,SOX4,SOX11", "TCF4,ZEB1,TCF3,SNAI2", "Tcfap2e", "Rfx1,Rfx5,Rfx2", "",    #10
+                         "TFAP2B,TFAP2C,TFAP2A", "RUNX1,RUNX2,RUNX", "", "", "Sox12,Sox11,Sox4",                                     #15
+                         "", "", "", "Hand1::Tcf3", "Klf7",                                                                                  #20
+                         "", "", "Rfx4", "", "",                                                                    #25
+                         "", "", "GATA3,GATA5,GATA4,GATA6,GATA2", "", "Tcf7,Tcf1",                      #30
+                         "POU2F1,POU3F4,Pou2f3,Pou2f2,Pou3f3,Brn1,OCT4,POU1F1", "", "", "", "",
+                         "", "TCF7"))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+
+#~~~
+id = "G946-1"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+
+alterMotifs <- toupper(c("Pou5f1::Sox2,Pou3f3,Oct4", "EOMES", "SNAI2,TCF3", "Klf12,Klf1,KLF5", "ZEB1",      #5
+                         "", "TFAP2A,TFAP2C,TFAP2B,", "", "TCF4", "",                                #10 
+                         "", "", "", "KLF10,RUNX2", ",",                     #15
+                         "Sox3", "", "Klf7,KLF14,KLF4", "Tcf12,Ascl2", "",                                 #16
+                         "Sox4,Sox11", "KLF1"))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+
+
+#~~~
+id = "G958-1"
+
+motif.files <- list.files(path = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/homerResults"), pattern = "^motif[0-9]+\\.motif$", full.names = TRUE)
+
+hr.ecDNA <- loadHomerRes(homerDir = paste0("/Users/cpan/Documents/scATAC/motifresult/", id, "/results/"), novo = T, known = F, motifIndex = 1:length(motif.files))@'novo res'
+alterMotifs <- toupper(c("", "", "", "", "", 
+                         "Tcf3", "OTX1,Otx2,Tcf1", "Tcfe2a,Ascl2", "Tcf7", "POU6F2,RUNX2",
+                         "", "Ascl1,Olig2,Tcfe2a", "", "Hand1::Tcf3", "Eomes",                                           #15
+                         "Sox14,SOX9,Sox17,SOX7,SOX15", "Tcfap2a", "", "Klf7", "Pou6f1,POU6F2,Lhx2",                               #20
+                         "Klf12,GATA3,KLF14", "GATA4,Gata1,Gata2", "Klf9", "Tcfap2e,Sox4,SOX11,tcf3", "",
+                         "", "STAT3,Stat5a::Stat5b", "", "TCF4", "",
+                         "SNAI2,TCF3"))
+
+hr.ecDNA <- hr.ecDNA %>% mutate(motif = alterMotifs)
+
+hr.ecDNA <- hr.ecDNA %>% arrange(-neglogPvalue) %>% tidyr::separate_rows(motif, sep = ",") %>% mutate(rank = 1:dim(.)[1])
+
+save(hr.ecDNA, file = paste0("./outputs/", id, ".motif.RData"))
+

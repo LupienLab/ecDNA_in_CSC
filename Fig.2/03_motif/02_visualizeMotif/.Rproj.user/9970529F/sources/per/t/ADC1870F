@@ -1,0 +1,26 @@
+{
+    "id": "ADC1870F",
+    "path": "~/Documents/gitHub/nature/Fig.2/03_motif/02_visualizeMotif/02_visualize_motif.R",
+    "project_path": "02_visualize_motif.R",
+    "type": "r_source",
+    "hash": "3324331622",
+    "contents": "",
+    "dirty": false,
+    "created": 1757954930295.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "63,0",
+        "scrollLine": "41"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1758113072,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1758113072682,
+    "read_only": false,
+    "read_only_alternatives": []
+}

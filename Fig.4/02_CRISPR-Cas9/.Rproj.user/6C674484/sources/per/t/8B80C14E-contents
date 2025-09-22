@@ -1,0 +1,57 @@
+rm(list = ls())
+
+library(dplyr)
+library(readxl)
+library(ggplot2)
+library(ggrepel)
+library(reshape2)
+library(magrittr)
+library(data.table)
+
+qBF = read_excel("./inputs/invasive_contstructive_reactive_deltaBF_TKO.xlsx", col_names = T) %>% as.data.frame() 
+
+qBF <- qBF %>% filter(gene %in% c("EGFR", "MDM2", "AGAP2", "CDK4", "MYCN")) %>% select(gene, G523, G549, G583, G620) 
+
+qBF.df <- reshape2::melt(qBF, id.vars = "gene") %>% magrittr::set_colnames(c("gene", "sample", "qBF"))
+qBF.df$genelabels <- ifelse(qBF.df$sample %in% c("G523", "G583"), ifelse(qBF.df$sample %in% "G583", "G583", "G523"), "")
+qBF.df$genelabrrr <- ifelse(qBF.df$sample %in% c("G549", "G620"), ifelse(qBF.df$sample %in% "G620", "G620", "G549"), "")
+qBF.df$label <- paste(qBF.df$genelabels, qBF.df$genelabrrr, sep = "")
+qBF.df <- qBF.df %>% mutate(color = ifelse(qBF > 0, "positive", "negative"))
+
+ggplot(qBF.df, aes(x = gene, y = qBF)) +
+  theme_bw() +
+  geom_violin(color = "blue") + # Violin plot
+  geom_point(position = position_jitter(seed = 1, width = 0.12), colour = "black") +
+  geom_text(aes(label = sample)) + # Add sample names
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.25) +
+  scale_color_manual(values = c("positive" = "red", "negative" = "grey")) + 
+  labs(title = NULL,x = NULL,y = "qBF score of oncogene") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, colour = "black"), 
+        legend.position = "none", 
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#~~~~
+
+qBF.df$genelabels <- ifelse(qBF.df$sample %in% c("G523", "G583"), ifelse(qBF.df$sample %in% "G583", "G583", "G523"), "")
+qBF.df$genelabrrr <- ifelse(qBF.df$sample %in% c("G549", "G620"), ifelse(qBF.df$sample %in% "G620", "G620", "G549"), "")
+qBF.df$label <- paste(qBF.df$genelabels, qBF.df$genelabrrr, sep = "")
+qBF.df <- qBF.df %>% mutate(color = ifelse(qBF > 0, "positive", "negative"))
+
+#---- violin plot 
+p <- ggplot(qBF.df, aes(x = gene, y = qBF)) + theme_bw() +
+  geom_violin( color = "blue") +
+  geom_point(position = position_jitter(seed = 1, width = 0.12), data = qBF.df[-which(qBF.df$label %in% c("G523", "G583", "G549", "G620")), ], aes(x = gene, y = qBF), colour="black") +
+  geom_point(position = position_jitter(seed = 1, width = 0.12), data = qBF.df[which(qBF.df$label %in% c("G523", "G583", "G549", "G620")), ],  aes(x = gene, y = qBF), colour="red") + 
+  geom_text_repel(aes(label = label)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.25) +
+  scale_color_manual(values = c("positive" = "red", "negative" = "grey")) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, colour = "black"),
+        axis.text.y = element_text(color = "black"),
+        panel.grid = element_blank()) + 
+  xlab("") + ylab("qBF score") 
+
+p 
+
+
+
+

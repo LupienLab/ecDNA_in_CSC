@@ -1,0 +1,27 @@
+{
+    "id": "F4A45382",
+    "path": "~/Documents/scATAC/stem/04.overlap.R",
+    "project_path": "04.overlap.R",
+    "type": "r_source",
+    "hash": "3782964745",
+    "contents": "",
+    "dirty": false,
+    "created": 1743711675780.0,
+    "source_on_save": false,
+    "relative_order": 5,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "115,0",
+        "scrollLine": "91"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1743712105,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1743712105209,
+    "read_only": false,
+    "read_only_alternatives": []
+}

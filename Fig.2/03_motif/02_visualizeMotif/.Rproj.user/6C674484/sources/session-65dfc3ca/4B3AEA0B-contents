@@ -1,0 +1,58 @@
+rm(list = ls())
+
+library(dplyr)
+library(stringr)
+library(data.table)
+
+
+files <- list.files(path = "/Users/cpan/Documents/scATAC/diffMotif/outputs/", pattern = "*.RData", full.names = TRUE)
+
+# Function to load and process each file
+load_and_process <- function(file) {
+  load(file)  # Load the .RData file
+  sample_name <- gsub("\\.motif\\.RData$", "", basename(file))  # Extract sample name
+  hr.ecDNA %>%
+    select(motif, neglogPvalue) %>%
+    mutate(sample = sample_name)  # Add sample name column
+}
+
+# Apply function to all files and combine into one data frame
+final_data <- bind_rows(lapply(files, load_and_process)) %>% as.data.frame() %>% filter(motif != "")
+final_data <- final_data %>% filter(motif %in% c("EOMES", "ETS1", 
+                                                 "FOSL1", "FOSL2", 
+                                                 "GATA3", "GATA4", 
+                                                 "KLF4", "KLF7", 
+                                                 "OCT4", "OCT2",
+                                                 "POU3F3", "POU3F4",
+                                                 "RFX3", "RFX4", 
+                                                 "RUNX1", "RUNX2",
+                                                 "SNAI2",
+                                                 "SOX10", "SOX11", "SOX2", "SOX21", "SOX3", "SOX4", "SOX9",
+                                                 "TCF1","TCF3", "TCF4",
+                                                 "TFAP2A", "TFAP2C",
+                                                 "ZEB1"))
+
+
+data <- dcast(final_data, sample ~ motif, value.var = "neglogPvalue") %>% magrittr::set_rownames(.$sample) %>% select(-sample)
+
+library(tidyr)
+library(tibble)
+heatmap_data <- final_data %>%
+  group_by(sample, motif) %>%
+  summarise(neglogPvalue = mean(neglogPvalue, na.rm = TRUE)) %>%  # Handle duplicates
+  pivot_wider(names_from = motif, values_from = neglogPvalue, values_fill = 0) %>%  # Fill NAs with 0
+  column_to_rownames("sample")  %>% select(sort(names(.))) # Set rownames as sample names
+
+# Convert to matrix for heatmap
+heatmap_matrix <- as.matrix(heatmap_data)
+
+
+pdf(paste0("./outputs/heatmap_select_motifs.pdf"), width = 10, height = 2) # width = 6
+
+plt <- pheatmap::pheatmap(heatmap_matrix, cluster_rows = F, cluster_cols = F, border_color = "black", lwd = 0.5,
+                   color = colorRampPalette(c("white", "orange", "red"))(200))
+plt
+
+dev.off()
+
+

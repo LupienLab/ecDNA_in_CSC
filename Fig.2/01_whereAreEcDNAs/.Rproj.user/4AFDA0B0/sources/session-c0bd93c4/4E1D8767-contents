@@ -1,0 +1,256 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+string fi1 = "ELAVL1"; //(lncRNA基因)需要改名现在是RBP了
+string fi2 = "PLCXD3"; //(mRNA基因)需要改名
+string fi3 = "hsa-miR-421"; //(miRNA基因)需要改名
+
+const string names1 = fi1; //(实验验证的RBP)
+const string names2 = fi2; //(实验验证的m)
+const string name = names1 + "-" + names2;
+const string name1 = name + ".NO";
+const char* command1 = "sort mi-m两列 | uniq > mi-m两列.su";
+const char* command2 = "sort mi-lnc两列 | uniq > mi-lnc两列.su";
+
+void geneSE()
+{
+  ifstream in("./mRNA.v36.transcripts.fa");
+  ifstream in1("./mRNA.v36.transcripts.fa");
+  string p1 = fi1 + "基因序列RBP";  //得到文件名称
+  string p2 = fi2 + "基因序列m";    //得到文件名称
+  ofstream out(p1);
+  ofstream out1(p2);
+  string fir1 = "|" + fi1 + "|";
+  string fir2 = "|" + fi2 + "|";
+  string line;
+  
+  if(in) // 有lncRNA序列数据
+  {
+    int flag = 0;
+    while(getline(in, line))
+    {
+      if(line[0] == '>')
+      {
+        if((int)line.find(fir1) != -1 && (int)line.find("|retained_intron|") == -1)
+        {
+          flag = 1;
+          out << line << endl;
+        }
+        else flag = 0;
+      }
+      else if(flag == 1 && line[0] != '>')
+      {
+        string s;
+        for(int i = 0; i < line.size(); i++)
+        {
+          if(line[i] == 'T') s += 'U';
+          else s += line[i];
+        }
+        out << s << endl;
+      }
+    }
+  }
+  else // 没有该文件
+  {
+    cout <<"no such file gencode.v36.transcripts.fa" << endl;
+  }
+  if(in1) // 有mRNA序列数据
+  {
+    int flag = 0;
+    while(getline(in1, line))
+    {
+      if(line[0] == '>')
+      {
+        if((int)line.find(fir2) != -1 )
+        {
+          flag = 1;
+          out1 << line << endl;
+        }
+        else flag = 0;
+      }
+      if(flag == 1 && line[0] != '>')
+      {
+        string s;
+        for(int i = 0; i < line.size(); i++)
+        {
+          if(line[i] == 'T') s += 'U';
+          else s += line[i];
+        }
+        out1 << s << endl;
+      }
+    }
+  }
+  else // 没有该文件
+  {
+    cout <<"no such file mRNA.v36.transcripts.fa" << endl;
+  }
+  // //cout << "ans: " << ans << endl << "tpp1: " << tpp1 << ' ' << "lnc1: " << lnc1;
+  // string strs1 = "miranda hsa.miRNA.fa " + fi1 + "基因序列RBP > mi-lnc";
+  // string strs2 = "miranda hsa.miRNA.fa " + fi2 + "基因序列m > mi-m";
+  // cout << strs1 << endl;
+  // cout << strs2 << endl;
+  // system(strs1.c_str());
+  // system(strs2.c_str());
+  
+  string strs1 = "miranda hsa.miRNA.fa " + fi2 + "基因序列m > mi-mRNA";
+  string strs2 = "miranda " + fi1 + "基因序列RBP " + fi2 + "基因序列m > RBP-m";
+  cout << strs1 << endl;
+  cout << strs2 << endl;
+  // cout << strs11 << endl;
+  // cout << strs22 << endl;
+  system(strs1.c_str());
+  system(strs2.c_str());
+}
+
+void extwo()
+{
+  ifstream in("mi-m");
+  ifstream in1("mi-lnc");
+  ofstream out("mi-m两列");
+  ofstream out1("mi-lnc两列");
+  string line;
+  if(in) // 有该文件
+  {
+    while(getline(in, line))
+    {
+      if(line[0] == '>' && line[1] == '>')
+      {
+        string str;
+        for(int i = 2; i < line.size(); i++)
+        {
+          if(line[i] == '|') str = str +'\t';
+          else str =  str + line[i];
+        }
+        stringstream ss(str);
+        int i = 0;
+        string s;
+        while(ss >> s)
+        {
+          i++;
+          if(i == 1 or i == 7) out << s << '\t';
+        }
+        out << endl;
+      }
+    }
+  }
+  else
+  {
+    cout << "没有找到mi-m" << endl;
+    return;
+  }
+  if(in1) // 有该文件
+  {
+    while(getline(in1, line))
+    {
+      if(line[0] == '>' && line[1] == '>')
+      {
+        string str;
+        for(int i = 2; i < line.size(); i++)
+        {
+          if(line[i] == '|') str = str +'\t';
+          else str =  str + line[i];
+        }
+        stringstream ss(str);
+        int i = 0;
+        string s;
+        while(ss >> s)
+        {
+          i++;
+          if(i == 1 or i == 7) out1 << s << '\t';
+        }
+        out1 << endl;
+      }
+    }
+  }
+  else
+  {
+    cout << "没有找到mi-m" << endl;
+    return;
+  }
+  int exitCode1 = system(command1);
+  int exitCode2 = system(command2);
+  if (exitCode1 == -1 || exitCode2 == -1) {
+    cout << "sort出错" << endl;
+    return;
+  }
+}
+
+void exthree()
+{
+  map<string, vector<string> > a1;
+  ifstream in("mi-lnc两列.su");
+  ifstream in1("mi-m两列.su");
+  ofstream out(name1);
+  string line;
+  if(in && in1) // 有该文件
+  {
+    while(getline(in1, line)) //mRNA
+    {
+      stringstream ss1(line);
+      string s1, s2;
+      ss1 >> s1 >> s2;
+      a1[s1].push_back(s2);
+    }
+    while(getline(in, line)) //lncRNA
+    {
+      stringstream ss2(line);
+      string s1, s2;
+      ss2 >> s1 >> s2;//mi-lnc-shu
+      if(a1.count(s1) == true)
+      {
+        for(auto j = 0; j < a1[s1].size(); j++) out << s2 << '\t' << s1 << '\t' << a1[s1][j] << endl;
+      }
+    }
+  }
+  else // 没有该文件
+  {
+    cout <<"no such file mi-lnc两列.su mi-m两列.su" << endl;
+    return;
+  }
+}
+
+void exthree2()
+{
+  ifstream in("../代码块/lncRNA.miRNA.mRNA.unique.validated.bed");
+  ifstream in1(name1);
+  ofstream out(name);
+  string line;
+  map<string, int> b1;
+  
+  if(in && in1) // 有该文件
+  {
+    out << "lncRNA" << '\t' <<  "miRNA" << '\t' << "mRNA" << endl;
+    while(getline(in1, line)) b1[line] = 1;
+    
+    while(getline(in, line))
+    {
+      string sf1 = line;
+      stringstream ss2(line);
+      string s1, s2, s3;
+      ss2 >> s1 >> s2 >> s3;//lnc-mi-m
+      if(s1 == names1 && s3 == names2) b1[sf1] = 1;
+    }
+    for(auto it = b1.begin(); it != b1.end(); it++)
+    {
+      out << it->first << endl;
+    }
+  }
+  else // 没有该文件
+  {
+    cout <<"no such file lncRNA.miRNA.mRNA.unique.validated.bed or 三列数据.." << endl;
+    return;
+  }
+}
+
+signed main()
+{
+  ios::sync_with_stdio(false);
+  cin.tie(0);
+  geneSE();
+  // extwo();
+  // exthree();
+  // exthree2();
+  // string delet = "rm mi-lnc两列 mi-m两列 " + name1;
+  // system(delet.c_str());
+  return 0;
+}

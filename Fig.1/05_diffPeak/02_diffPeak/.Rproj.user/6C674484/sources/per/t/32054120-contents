@@ -1,0 +1,67 @@
+rm(list = ls())
+
+library(tidyr)
+library(dplyr)
+library(DESeq2)
+library(ggplot2)
+library(Rsubread)
+library(data.table)
+library(bedtoolsr)
+library(ChIPseeker)
+library(GenomicRanges)
+library(clusterProfiler)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+
+ids = c("A7TK", "G933", "G946", "G958")
+fileGrList <- lapply(ids, function(id){
+  fread(paste0("/Users/cpan/Documents/su2cProj/diffPeak/outputs.", id, "/", id, ".up.within.interval.bed")) %>% {colnames(.) = c("chr", "start", "end");.} %>% GRanges()
+})
+names(fileGrList) <- ids
+
+peakAnnoList <- lapply(fileGrList, annotatePeak, TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", 
+                       tssRegion = c(-3000, 3000), genomicAnnotationPriority = c("Promoter", "5UTR", "3UTR", "Exon", "Intron", "Downstream", "Intergenic"))
+plotAnnoBar(peakAnnoList) + theme(legend.position = "right") + labs(title = "") 
+
+annoStat <- lapply(peakAnnoList, function(df) df@annoStat)
+annostat <- annoStat[[1]] %>% magrittr::set_colnames(c("Feature", names(annoStat)[1]))
+for(i in 2:length(annoStat)){
+  annostat <- annostat %>% full_join(annoStat[[i]], join_by(Feature))
+  colnames(annostat)[dim(annostat)[2]] <- names(annoStat)[i]
+}
+annostat[is.na(annostat)] <- 0
+class(annostat)
+
+df <- annostat
+df <- df %>% mutate(Feature = sub("\\s*\\([^)]+\\)", "", Feature))
+df <- df %>% mutate(Feature = sub(".*\\b(Exon)\\b.*", "\\1", Feature)) #Exon
+df <- df %>% mutate(Feature = sub(".*\\b(Intron)\\b.*", "\\1", Feature)) #Intron
+
+for(i in 1:dim(df)[1]){
+  if(df$Feature[i] == "Promoter") df$Feature[i] <- 1
+  if(df$Feature[i] == "3' UTR") df$Feature[i] <- 2
+  if(df$Feature[i] == "5' UTR") df$Feature[i] <- 3
+  if(df$Feature[i] == "Exon") df$Feature[i] <- 4
+  if(df$Feature[i] == "Downstream") df$Feature[i] <- 5
+  if(df$Feature[i] == "Intron") df$Feature[i] <- 6
+  if(df$Feature[i] %in% "Distal Intergenic") df$Feature[i] <- 7
+}
+
+annostat.df <- df %>% group_by(Feature) %>% summarize(across(everything(), sum, na.rm = TRUE)) %>% ungroup() %>% as.data.frame()
+annostat.df <- annostat.df %>% pivot_longer(cols = -Feature, names_to = "Sample", values_to = "Percentage") %>% as.data.frame()
+
+p <- ggplot(annostat.df, aes(x = Sample, y = Percentage, fill = as.factor(Feature))) + 
+  theme_bw() +
+  geom_bar(stat = "identity", position = "stack") + 
+  scale_fill_manual(values = c("1" = '#3F51B5FF', "2" = "#b2df8a", "3" = '#4CAF50FF', "4" = "#FF9800FF", "5" = "#d94801", "6" = "#9C27B0FF", "7" = "#F44336FF"), 
+                    labels = c("Promoter", "3' UTR", "5' UTR", "Exon", "Downstream", "Intron", "Distal Intergenic"))  +
+  labs(title = NULL, x = NULL, y = "Percentage", fill = "Feature") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, color = "black"),
+        axis.text.y = element_text(color = "black"),
+        legend.text = element_text(size = 10, colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.5, "cm"),
+        legend.key.width = unit(0.5, "cm"))
+ 
+p
+  

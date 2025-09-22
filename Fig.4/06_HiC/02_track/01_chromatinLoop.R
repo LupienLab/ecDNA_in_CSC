@@ -1,0 +1,24 @@
+rm(list = ls())
+
+#~~~ R 4.2
+library(Sushi)
+library(dplyr)
+library(tidyr)
+library(dplyr)
+library(data.table)
+
+id="G523_L"
+chr = "chr7"
+start = 54850756
+end = 55232892
+
+loop <- fread(paste0("./inputs/", id, ".enriched_pixels_5000.bedpe")) %>% as.data.frame() %>% dplyr::select(chr1, x1, x2, chr2, y1, y2) %>%
+  mutate(chr1 = paste0("chr", chr1)) %>% mutate(chr2 = paste0("chr", chr2)) %>% {colnames(.) = c("chrom1", "start1", "end1", "chrom2", "start2", "end2");.} %>%
+  mutate(dist = abs(end2- start1))
+
+
+plotBedpe(loop, chr, start, end, heights = loop$dist, plottype="loops", flip=TRUE)
+labelgenome(chr, start, end, side = 3, n = 3, scale = "Mb")
+axis(side=2,las=2,tcl=.2)
+mtext("distance",side=2,line=1.75,cex=.75,font=2)
+

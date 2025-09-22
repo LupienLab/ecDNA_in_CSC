@@ -1,0 +1,26 @@
+{
+    "id": "9FE4ED22",
+    "path": "~/Documents/su2cProj/track/EGFR_ARC.R",
+    "project_path": "EGFR_ARC.R",
+    "type": "r_source",
+    "hash": "659828994",
+    "contents": "",
+    "dirty": false,
+    "created": 1706489998996.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "32,50",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1742994229,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1742994229277,
+    "read_only": false,
+    "read_only_alternatives": []
+}

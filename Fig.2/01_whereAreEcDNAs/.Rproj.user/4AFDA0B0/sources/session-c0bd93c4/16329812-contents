@@ -1,0 +1,421 @@
+getPeakScoreMat <- function(
+    proj            = NULL,
+    peaks           = NULL,
+    geneModel       = "exp(-abs(x)/500) + exp(-1)",
+    extendUpstream  = c(0, 0),
+    extendDownstream= c(0, 0),
+    geneUpstream    = 0,
+    geneDownstream  = 0,
+    useGeneBoundaries = TRUE,
+    useTSS          = FALSE,
+    extendTSS       = FALSE,
+    tileSize        = 500,
+    ceiling         = 8,
+    geneScaleFactor = 5,
+    scaleTo         = 10000,
+    excludeChr      = c("chrY","chrM"),
+    blacklist       = NULL,
+    cellNames       = NULL,
+    allCells        = NULL,
+    force           = TRUE,
+    tmpFile         = NULL,
+    subThreads      = 1,
+    tstart          = NULL,
+    logFile         = NULL,
+    fragments       = NULL,
+    returnSummarizedExperiment = FALSE  # 可选：若想直接返回SummarizedExperiment
+){
+  
+  CNVsProj <- proj
+  cellNames <- sub(".*#", "", CNVsProj$cellNames)
+  peaks <- CNVsProj@peaks
+  fragments <- CNVsProj@sampleColData$fragfiles
+  #return(as.list(environment()))
+  fragment_data <- fread(fragments, header = FALSE)
+  # 给列命名，第四列是细胞名称
+  colnames(fragment_data) <- c("chrom", "start", "end", "cell", "score")
+  
+  frags <- GRanges(
+    seqnames = fragment_data$chrom,
+    ranges   = IRanges(start = fragment_data$start, end = fragment_data$end),
+    RG       = fragment_data$cell
+  )
+  frags <- frags[frags$RG %in% cellNames]
+  chrs <- unique(frags@seqnames)
+  #----------------------------------------------------------------------------
+  # 0) 预处理、去掉写H5的逻辑
+  #----------------------------------------------------------------------------
+  
+  # 如果 peaks$symbol 是 list，则报错
+  # if(inherits(mcols(peaks)$symbol, "list") || inherits(mcols(peaks)$symbol, "SimpleList")){
+  #   stop("Found a list in peaks symbol! This is an incorrect format. Please correct your peaks!")
+  # }
+  
+  # 从h5File提取信息（若需要）
+  #H5File     <- h5File
+  # 原代码中的 sampleName、.createH5Group()、.initializeMat() 等都去掉
+  
+  # geneAnnotation、genomeAnnotation
+  geneAnnotation   <- getGeneAnnotation()
+  genomeAnnotation <- getGenomeAnnotation()
+  geneAnnotation   <- .validGeneAnnotation(geneAnnotation)
+  genomeAnnotation <- .validGenomeAnnotation(genomeAnnotation)
+  geneAnnotation   <- .validGeneAnnoByGenomeAnno(
+    geneAnnotation   = geneAnnotation, 
+    genomeAnnotation = genomeAnnotation
+  )
+  
+  # 若 blacklist 未指定，则用 genomeAnnotation 内置的
+  if(is.null(blacklist) && !is.null(genomeAnnotation$blacklist)){
+    blacklist <- genomeAnnotation$blacklist
+  }
+  
+  # 如果没给 cellNames，就报错
+  if(is.null(cellNames)){
+    stop("not cellNames")
+  }
+  if(!is.null(allCells)){
+    cellNames <- cellNames[cellNames %in% allCells]
+  }
+  
+  # 获取 H5 里可用的染色体信息
+  #chrs <- .availableChr(H5File)
+  
+  # 过滤 peaks
+  geneRegions <- peaks[ BiocGenerics::which(seqnames(peaks) %bcni% excludeChr ) ]
+  geneRegions <- geneRegions[ BiocGenerics::which(seqnames(geneRegions) %bcin% chrs) ]
+  seqlevels(geneRegions) <- as.character(unique(seqnames(geneRegions)))
+  geneRegions <- geneRegions[ !is.na(mcols(geneRegions)$symbol) ]
+  
+  #----------------------------------------------------------------------------
+  # 1) 处理 geneRegions：是否useTSS, geneWeight, 等
+  #----------------------------------------------------------------------------
+  if(useTSS){
+    # 以 TSS 为中心
+    geneRegions$geneStart <- start(GenomicRanges::resize(geneRegions, 1, "start"))
+    geneRegions$geneEnd   <- start(GenomicRanges::resize(geneRegions, 1, "end"))
+    geneRegions           <- GenomicRanges::resize(geneRegions, 1, "start")
+    if(extendTSS){
+      geneRegions <- extendGR(geneRegions, upstream = geneUpstream, downstream = geneDownstream)
+    }
+    geneRegions$geneWeight <- geneScaleFactor
+  } else {
+    # 以 peak body
+    geneRegions$geneStart <- start(GenomicRanges::resize(geneRegions, 1, "start"))
+    geneRegions$geneEnd   <- start(GenomicRanges::resize(geneRegions, 1, "end"))
+    geneRegions           <- extendGR(geneRegions, upstream = geneUpstream, downstream = geneDownstream)
+    m <- 1 / width(geneRegions)
+    geneRegions$geneWeight <- 1 + m * (geneScaleFactor - 1) / (max(m) - min(m))
+  }
+  geneRegions <- sort(sortSeqlevels(geneRegions), ignore.strand = TRUE)
+  
+  # 给每条染色体分别赋 idx，用于后面排序
+  geneRegions <- split(geneRegions, seqnames(geneRegions))
+  geneRegions <- lapply(geneRegions, function(x){
+    mcols(x)$idx <- seq_along(x)
+    x
+  })
+  
+  # 如果有 blacklist，就按染色体split
+  if(!is.null(blacklist) && length(blacklist) > 0){
+    blacklist <- split(blacklist, seqnames(blacklist))
+  }
+  
+  #----------------------------------------------------------------------------
+  # 2) 分染色体计算矩阵，并先求各细胞的总覆盖量 totalGS
+  #----------------------------------------------------------------------------
+  message("Start computing coverage (peak-by-cell) for each chromosome ...")
+  
+  totalGS <- .safelapply(seq_along(geneRegions), function(z){
+    # 对应染色体z
+    totalGSz <- tryCatch({
+      geneRegionz <- geneRegions[[z]]
+      geneRegionz <- geneRegionz[order(geneRegionz$idx)]
+      chrz        <- paste0(unique(seqnames(geneRegionz)))
+      
+      # 读片段
+      fragGRanges   <- frags[seqnames(frags) == chrz]
+      frag <- IRanges(start = start(fragGRanges), 
+                      end = end(fragGRanges))
+      mcols(frag)$RG <- mcols(fragGRanges)$RG
+      fragSt <- trunc(start(frag)/tileSize) * tileSize
+      fragEd <- trunc(end(frag)/tileSize)   * tileSize
+      fragBC <- rep(S4Vectors::match(mcols(frag)$RG, cellNames), 2)
+      rm(frag); gc()
+      
+      uniqIns <- sort(unique(c(fragSt, fragEd)))
+      matGS <- Matrix::sparseMatrix(
+        i = match(c(fragSt, fragEd), uniqIns),
+        j = fragBC,
+        x = rep(1, 2 * length(fragSt)),
+        dims = c(length(uniqIns), length(cellNames))
+      )
+      if(!is.null(ceiling)){
+        matGS@x[ matGS@x > ceiling ] <- ceiling
+      }
+      uniqueTiles <- IRanges(start = uniqIns, width = tileSize)
+      rm(fragSt, fragEd, fragBC, uniqIns); gc()
+      
+      # 根据 useGeneBoundaries 构建 extendedGeneRegion
+      #Time to Overlap Gene Windows
+      if(useGeneBoundaries){
+        #extendUpstream和extendDownstream参数用于指定我们要扩展多少基因区域的上游和下游区域
+        geneStartz <- start(GenomicRanges::resize(geneRegionz, 1, "start"))
+        geneEndz <- start(GenomicRanges::resize(geneRegionz, 1, "end"))
+        #返回geneStartz, geneEndz相比的最大最小值
+        pminGene <- pmin(geneStartz, geneEndz)
+        pmaxGene <- pmax(geneStartz, geneEndz)
+        #+链
+        idxMinus <- BiocGenerics::which(strand(geneRegionz) != "-")
+        #pminGene是小的start的组成 pReverse 由+链或*链是max(extendUpstream) - 链子max(extendDownstream)构成
+        pReverse <- rep(max(extendDownstream), length(pminGene))
+        pReverse[idxMinus] <- rep(max(extendUpstream), length(idxMinus))
+        #pReverseMin由+链或*链是min(extendUpstream) - 链子min(extendDownstream)构成
+        pReverseMin <- rep(min(extendDownstream), length(pminGene))
+        pReverseMin[idxMinus] <- rep(min(extendUpstream), length(idxMinus))
+        #pForward由+链或*链是max(extendDownstream) - 链子max(extendUpstream)构成
+        pForward <- rep(max(extendUpstream), length(pminGene))
+        pForward[idxMinus] <- rep(max(extendDownstream), length(idxMinus))      
+        #pForward由+链或*链是min(extendDownstream) - 链子min(extendUpstream)构成
+        pForwardMin <- rep(min(extendUpstream), length(pminGene))
+        pForwardMin[idxMinus] <- rep(min(extendDownstream), length(idxMinus))      
+        
+        ################################################################
+        #We will test when genes pass by another gene promoter
+        ################################################################
+        
+        #Start of Range is based on the max observed gene ranged <- direction
+        #s是对基因start和end进行比较如第二个start和第一个end+500进行比较取最大的
+        s <- pmax(
+          c(1, pmaxGene[-length(pmaxGene)] + tileSize), 
+          pminGene - pReverse
+        )
+        s <- pmin(pminGene - pReverseMin, s)
+        
+        #End of Range is based on the max observed gene ranged -> direction
+        e <- pmin(
+          c(pminGene[-1] - tileSize, pmaxGene[length(pmaxGene)] + pForward[length(pmaxGene)]), 
+          pmaxGene + pForward
+        )
+        e <- pmax(pmaxGene + pForwardMin, e)
+        
+        extendedGeneRegion <- IRanges(start = s, end = e)
+        #检查
+        idx1 <- which(pminGene - pReverseMin < start(extendedGeneRegion))
+        if(length(idx1) > 0){
+          stop("Error in gene boundaries minError")
+        }
+        #检查
+        idx2 <- which(pmaxGene + pForwardMin > end(extendedGeneRegion))
+        if(length(idx2) > 0){
+          stop("Error in gene boundaries maxError")
+        }
+        
+        rm(s, e, pReverse, pReverseMin, pForward, pForwardMin, geneStartz, geneEndz, pminGene, pmaxGene)
+        
+      }else{
+        
+        extendedGeneRegion <- ranges(suppressWarnings(extendGR(geneRegionz, upstream = max(extendUpstream), downstream = max(extendDownstream))))
+        
+      }
+      
+      # overlap
+      hits <- findOverlaps(extendedGeneRegion, uniqueTiles)
+      x    <- distance(ranges(geneRegionz)[queryHits(hits)], 
+                       uniqueTiles[subjectHits(hits)])
+      # 正负链处理
+      isMinus  <- which(strand(geneRegionz) == "-")
+      signDist <- sign(
+        start(uniqueTiles)[subjectHits(hits)] - 
+          start(GenomicRanges::resize(geneRegionz,1,"start"))[queryHits(hits)]
+      )
+      signDist[isMinus] <- signDist[isMinus] * -1
+      x <- x * signDist
+      # 评估 geneModel
+      x <- eval(parse(text = geneModel))
+      # 乘以 geneWeight
+      x <- x * mcols(geneRegionz)$geneWeight[ queryHits(hits) ]
+      
+      # 去黑名单
+      if(!is.null(blacklist[[chrz]]) && length(blacklist[[chrz]]) > 0){
+        tilesBlacklist <- 1 * (!overlapsAny(uniqueTiles, ranges(blacklist[[chrz]])))
+        x <- x * tilesBlacklist[ subjectHits(hits) ]
+      }
+      
+      # 构建 (peak x tile) 矩阵，然后乘以 (tile x cell)
+      tmpMat <- Matrix::sparseMatrix(
+        i    = queryHits(hits),
+        j    = subjectHits(hits),
+        x    = x,
+        dims = c(length(geneRegionz), nrow(matGS))
+      )
+      matGS <- tmpMat %*% matGS
+      colnames(matGS) <- cellNames
+      
+      # 得到列求和
+      totalGSz <- Matrix::colSums(matGS)
+      
+      # 为了后面归一化，需要先把这条染色体的矩阵保存到RDS
+      .safeSaveRDS(matGS, file = paste0(tmpFile, "-", chrz, ".rds"), compress = FALSE)
+      rm(tmpMat, matGS, x, hits, uniqueTiles, signDist, isMinus)
+      gc()
+      
+      totalGSz
+      
+    }, error = function(e){
+      # 出错时，可以打印信息
+      message("Error in addPeakScoreMat_inMemory for chromosome: ", z)
+      message(conditionMessage(e))
+      NULL
+    })
+    totalGSz
+  }, threads = subThreads) %>% Reduce("+", .)
+  
+  #----------------------------------------------------------------------------
+  # 3) 归一化并合并各染色体矩阵
+  #----------------------------------------------------------------------------
+  message("Merging chromosome matrices, normalizing, building final matrix...")
+  
+  # 准备一个 list 来存放每条染色体的 (peak x cell) 矩阵
+  matList <- list()
+  
+  # 记录一下所有peak的 GRanges 以便最后做行名
+  allPeakGR <- GRangesList()
+  
+  for(z in seq_along(geneRegions)){
+    chrz        <- paste0(unique(seqnames(geneRegions[[z]])))
+    geneRegionz <- geneRegions[[z]]
+    geneRegionz <- geneRegionz[order(geneRegionz$idx)]
+    allPeakGR[[chrz]] <- geneRegionz
+    
+    # 读回 tmp
+    matGS <- readRDS(paste0(tmpFile, "-", chrz, ".rds"))
+    file.remove(paste0(tmpFile, "-", chrz, ".rds"))
+    
+    # 归一化
+    matGS@x <- as.numeric(scaleTo * matGS@x / rep.int(totalGS, diff(matGS@p)))
+    matGS@x <- round(matGS@x, 3)
+    matGS   <- Matrix::drop0(matGS)
+    
+    matList[[chrz]] <- matGS
+    rm(matGS); gc()
+  }
+  
+  # 按行 (peak) 合并
+  peakMat <- do.call(rbind, matList)
+  allPeakGR <- unlist(allPeakGR)  # 合并为一个 GRanges
+  # 给行名
+  rownames(peakMat) <- paste0(
+    seqnames(allPeakGR), "_", start(allPeakGR), "_", end(allPeakGR))
+  colnames(peakMat) <- cellNames
+  
+  #----------------------------------------------------------------------------
+  # 4) 是否需要返回 SummarizedExperiment
+  #----------------------------------------------------------------------------
+  if(returnSummarizedExperiment){
+    # 如果想带 rowRanges + assays 的 SummarizedExperiment，
+    # 这里可以简单创建：
+    library(SummarizedExperiment)
+    
+    # 构造 SummarizedExperiment
+    # colData 暂时空，也可以根据你的需求放置一些细胞元数据
+    se <- SummarizedExperiment(
+      assays    = list(PeakScoreMatrix = peakMat),
+      rowRanges = allPeakGR,
+      colData   = DataFrame(cells = colnames(peakMat))
+    )
+    # 排序一下
+    se <- sort(se)
+    return(se)
+  } else {
+    # 否则直接返回稀疏矩阵
+    return(peakMat)
+  }
+}
+
+
+RunMACS2 <- function(frags = NULL,
+                     sampleName = NULL,
+                     outputFile = NULL, 
+                     pathToMacs2 = NULL,
+                     format = "BED", 
+                     shift = 100, 
+                     ext = 200, 
+                     qval = "5e-2", 
+                     useSPMR = TRUE) {
+  
+  cellNames <- frags@cells
+  
+  fragments <- frags@path
+  #return(as.list(environment()))
+  fragment_data <- fread(fragments, header = FALSE)
+  # 给列命名，第四列是细胞名称
+  colnames(fragment_data) <- c("chrom", "start", "end", "cell", "score")
+  
+  frags_data <- GRanges(
+    seqnames = fragment_data$chrom,
+    ranges   = IRanges(start = fragment_data$start, end = fragment_data$end),
+    RG       = fragment_data$cell
+  )
+  frags_data <- frags_data[frags_data$RG %in% cellNames]
+  
+  # 调用MACS2
+  if(is.null(pathToMacs2)){
+    stop("Please enter the path for pathToMacs2.")
+  }
+  # 读取样本名称和细胞名称
+  #sampleName <- .h5read(H5FilePath, "Metadata/sample", method = "fast")
+  cellNames <- frags_data$RG
+  
+  # 获取所有可用的染色体
+  availableChr <- unique(as.character(seqnames(frags_data)))
+  availableChr <- mixedsort(availableChr)
+  
+  gc()
+  
+  all_fragik <- frags_data
+  outputDir <- file.path(paste0(sampleName,".outputs"), "macs2")
+  
+  if (dir.exists(outputDir)) {
+    # 删除目录及其所有内容
+    unlink(outputDir, recursive = TRUE)
+  }
+  dir.create(outputDir, recursive = TRUE)
+  if(is.null(outputFile)){
+    outputFile <- paste0(sampleName, ".filteredfrags.bed")
+  }
+  # 保存结果为BED文件
+  write.table(data.frame(seqnames(all_fragik), start(all_fragik), end(all_fragik)),
+              file = file.path(outputDir, outputFile), sep="\t", quote=FALSE,
+              row.names=FALSE, col.names=FALSE)
+  rm(all_fragik)
+  
+  cat("Output file path:", outputDir, "\n")
+  cat("BED file location:", file.path(outputDir, outputFile), "\n")
+  cat("Starting Macs2...\n")
+  gc()
+  # 构建MACS2命令
+  cmd <- sprintf("callpeak -t %s -n %s --outdir %s --format %s --nomodel --shift %d --ext %d --qval %s",
+                 file.path(outputDir, outputFile), sampleName, outputDir, format, shift, ext, qval)
+  
+  if (useSPMR) {
+    cmd <- sprintf("%s -B --SPMR", cmd)
+  }
+  
+  
+  system2(pathToMacs2, cmd, wait = TRUE)
+  
+  narrowPeakFiles <- list.files(path = outputDir, pattern = "\\.narrowPeak$", full.names = TRUE)
+  peakscolNames <- c("chrom", "start", "end", "name", "score",
+                     "strand", "signalValue", "pValue", "qValue", "peak")
+  peaks <- read.table(file = narrowPeakFiles, sep = '\t', col.names = peakscolNames)
+  peakseqnames <- peaks$chrom
+  peakranges <- IRanges(start = peaks$start, end = peaks$end)
+  peakstrand <- rep("*", length(peakranges))
+  peaksymbol <- paste0(peaks$chrom, ':', peaks$start,'-', peaks$end, seq(nrow(peaks)))
+  peaks <- GRanges(seqnames = peakseqnames,
+                   ranges = peakranges,
+                   strand = peakstrand,
+                   symbol = peaksymbol)
+  peaks
+}

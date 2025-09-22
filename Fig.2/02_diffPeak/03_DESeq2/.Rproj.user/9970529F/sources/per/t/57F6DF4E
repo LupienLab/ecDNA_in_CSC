@@ -1,0 +1,26 @@
+{
+    "id": "57F6DF4E",
+    "path": "~/Documents/gitHub/nature/Fig.2/02_diffPeak/03_DESeq2/01_diffPeak.R",
+    "project_path": "01_diffPeak.R",
+    "type": "r_source",
+    "hash": "2687846764",
+    "contents": "",
+    "dirty": false,
+    "created": 1749826991961.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "11,10",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757967676,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757967676552,
+    "read_only": false,
+    "read_only_alternatives": []
+}

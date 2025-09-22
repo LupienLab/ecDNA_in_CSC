@@ -1,0 +1,86 @@
+source("./librarys.R")
+addWhereAreCNVsGenome("hg38")
+WhereAreCNVsFiles <- "./G958.outputs/h5File/G958.h5"
+
+WhereAreCNVsProj <- WhereAreCNVsProject(
+  h5File = WhereAreCNVsFiles,
+  geneAnnotation = getGeneAnnotation(),
+  genomeAnnotation = getGenomeAnnotation(),
+  threads = 1
+)
+
+PeakScoreMatrix <- getMatrixFromProject(
+  WhereAreCNVsProj, 
+  useMatrix = "PeakScoreMatrix" 
+)
+
+PeakScoreMatrixs <- PeakScoreMatrix %>%
+  assay() %>%
+  as.matrix() %>%
+  {rownames(.) <- rowData(PeakScoreMatrix)$name; .} 
+peaks <- rowData(PeakScoreMatrix)
+peak_order <- data.frame(
+  chr = peaks$seqnames,
+  start = peaks$start,
+  stop = peaks$end,
+  symbol = peaks$name
+)
+peak_order <- peak_order[!is.na(peak_order$symbol), ]
+# 将 symbol 列设置为行名并移除 symbol 列
+row.names(peak_order) <- peak_order$symbol
+peak_order$symbol <- NULL
+peak_order$chr_num <- as.numeric(gsub("chr", "", gsub("X", "23", gsub("Y", "24", peak_order$chr))))
+# 按照提取的数字和 start 列排序
+peak_order_sorted <- peak_order[order(peak_order$chr_num, peak_order$start), ]
+#不需要 chr_num 列，可以在排序后将其删除
+peak_order_sorted$chr_num <- NULL
+peak_order <- peak_order_sorted
+rm(peak_order_sorted)
+peak_order
+
+cellColData1 <- WhereAreCNVsProj@cellColData
+# 创建一个新的 DataFrame，并转换 normalCells 列的值
+annotations_file <- data.frame(
+  V2 = ifelse(cellColData1$normalCells, "non-malignant", "malignant"),
+  row.names = row.names(cellColData1)
+)
+
+ref_group_names=c("non-malignant")
+object.size(PeakScoreMatrixs) / (1024^3)
+zero_count <- sum(PeakScoreMatrixs == 0)
+
+PeakScoreMatrixs
+annotations_file
+peak_order
+ref_group_names
+
+infercnv <- methods::setClass(
+  "infercnv",
+  slots = c(
+    expr.data = "ANY", #基因表达矩阵它后面会经过标准化
+    count.data = "ANY", #基因表达矩阵
+    gene_order= "data.frame", #LRRC41    chr1 46726868 46769280 基因位置
+    reference_grouped_cell_indices = "list", #正常细胞位置
+    observation_grouped_cell_indices = "list",#不正常细胞位置
+    tumor_subclusters  = "ANY",  #$chr_exclude"chrX" "chrY" "chrM" #$min_max_counts_per_cell 100 Inf
+    #$max_cells_per_groupNULL #$counts_md5 "a08510e3cc05c9edd765cdf6e2858080"
+    options = "list",           
+    .hspike = "ANY") )
+
+C_CHR <- "chr"
+C_START <- "start"
+C_STOP <- "stop"
+C_HCLUST_METHODS <- c("ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid")
+C_OUTPUT_FORMAT <- c("pdf", "png")
+
+## also including some globals:
+infercnv.env <- new.env()
+infercnv.env$GLOBAL_NUM_THREADS <- 1  # default is single-threaded.
+
+# 转换为 dgCMatrix
+# PeakScoreMatrixs <- Matrix(PeakScoreMatrixs, sparse = TRUE)
+# infercnv_obj = CreateInfercnvObject(raw_counts_matrix=PeakScoreMatrixs,
+#                                     annotations_file=annotations_file,
+#                                     delim="\t",
+#                                     gene_order_file=peak_order,
+#                                     ref_group_names=ref_group_names ) 

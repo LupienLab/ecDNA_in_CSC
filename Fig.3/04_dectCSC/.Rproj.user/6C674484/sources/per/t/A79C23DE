@@ -1,0 +1,27 @@
+{
+    "id": "A79C23DE",
+    "path": "~/Documents/scATAC/stem/02.PCA.R",
+    "project_path": "02.PCA.R",
+    "type": "r_source",
+    "hash": "3646665051",
+    "contents": "",
+    "dirty": false,
+    "created": 1741803840902.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "42,2",
+        "scrollLine": "1"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1738168450,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1738168450,
+    "read_only": false,
+    "read_only_alternatives": []
+}

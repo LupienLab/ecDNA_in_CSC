@@ -1,0 +1,36 @@
+rm(list = ls())
+
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(stringr)
+library(data.table)
+
+files <- list.files(path = "/Users/cpan/Documents/su2cProj/diffMotif/outputs/", pattern = "*.RData", full.names = TRUE)
+
+load.motifs <- function(file) {
+  #~~~ file = "/Users/cpan/Documents/su2cProj/diffMotif/outputs//G523-1.motif.RData"
+  load(file)  
+  sample_name <- gsub("\\.motif\\.RData$", "", basename(file))  #~~~ extract sample name
+  motif_df <- motif_df %>% select(motif, neglogPvalue) %>% mutate(sample = sample_name) %>% distinct(motif, .keep_all = TRUE) %>% as.data.frame()
+}
+
+#~~~ apply function to all files and combine into one data frame
+final_data <- bind_rows(lapply(files, load.motifs)) %>% as.data.frame() %>% filter(motif != "")
+
+heatmap_data <- final_data %>% group_by(sample, motif) %>%
+  pivot_wider(names_from = motif, values_from = neglogPvalue, values_fill = 0) %>%  
+  column_to_rownames("sample")  %>% select(sort(names(.)))
+
+#~~~ convert to matrix for heatmap
+heatmap_matrix <- as.matrix(heatmap_data)
+
+#~~~ heat-map plot
+pdf(paste0("./outputs/heatmap_motifs.pdf"), width = 40, height = 3) # width = 6
+
+heat_plt <- pheatmap::pheatmap(heatmap_matrix, cluster_rows = F, cluster_cols = F, border_color = "black", lwd = 0.75, color = colorRampPalette(c("white", "orange", "red"))(200))
+heat_plt
+
+dev.off()
+
+

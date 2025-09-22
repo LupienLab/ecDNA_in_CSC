@@ -1,0 +1,66 @@
+library(digest)
+library(igraph)
+library(RANN)
+library(Matrix)
+library(parallelDist)
+library(ape)
+library(phyclust)
+library(Seurat)
+source("./cnv进程.R")
+source("./重写的方法.R")
+source("./cnv/对细胞和基因过滤.R")
+source("./cnv/对表达值的处理.R")
+source("./cnv/聚类画图.R")
+source("./run.R")
+
+# 2
+reload_info = run(infercnv_obj,
+          cutoff=0.1, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
+          out_dir="./outputs", 
+          cluster_by_groups=TRUE, 
+          denoise=TRUE)
+
+source("./run.R")
+obj = run(infercnv_obj,
+          cutoff=0.2, # cutoff=1 works well for Smart-seq2, and cutoff=0.1 works well for 10x Genomics
+          out_dir="./outputs", 
+          cluster_by_groups=TRUE, 
+          denoise=TRUE)
+
+assignVarsToEnv(obj)
+
+
+expr <- as.data.frame(infercnv_obj@expr.data)
+expr2 <- as.data.frame(infercnv_obj@expr.data)
+# 创建一个列表，包含所有变量的名称和值
+var_names <- ls(environment())
+variables <- setNames(lapply(var_names, function(name) get(name, envir = environment())), var_names)
+return(variables)
+
+
+
+df <- expr[,c(1:5)]
+par(mfrow = c(1, 5), mar = c(2, 2, 2, 2), oma = c(0, 0, 0, 0))  # 设置多图布局和边距
+
+# 对每一列做点图
+for (i in 1:ncol(df)) {
+  plot(df[[i]], main = paste("Plot of Column", i), xlab = "", ylab = "", pch = 16, col = "blue")
+  axis(1, labels = FALSE)  # 隐藏 x 轴标签
+  axis(2, labels = FALSE)  # 隐藏 y 轴标签
+}
+for (i in 1:ncol(df)) {
+  plot(df[[i]], main = paste("Plot of Column", i), xlab = "", ylab = "", pch = 16, col = "blue", cex = 0.5)
+  axis(1, labels = FALSE)  # 隐藏 x 轴标签
+  axis(2, labels = FALSE)  # 隐藏 y 轴标签
+}
+rownames(df)[12500:13500]
+rownames(df)[19500:20010]
+
+
+x33 <- WhereAreCNVsProj$cellNames[WhereAreCNVsProj$normalCells][1:5]
+df2 <- expr[,x33]
+for (i in 1:ncol(df)) {
+  plot(df2[[i]], main = paste("Plot of Column", i), xlab = "", ylab = "", pch = 16, col = "blue", cex = 0.5)
+  axis(1, labels = FALSE)  # 隐藏 x 轴标签
+  axis(2, labels = FALSE)  # 隐藏 y 轴标签
+}

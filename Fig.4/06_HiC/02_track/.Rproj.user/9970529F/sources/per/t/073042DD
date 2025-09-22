@@ -1,0 +1,26 @@
+{
+    "id": "073042DD",
+    "path": "~/Documents/gitHub/nature/Fig.4/06_HiC/02_track/01_chromatinLoop.R",
+    "project_path": "01_chromatinLoop.R",
+    "type": "r_source",
+    "hash": "2160441083",
+    "contents": "",
+    "dirty": false,
+    "created": 1748552992864.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "23,0",
+        "scrollLine": "2"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1758051558,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1758051558,
+    "read_only": false,
+    "read_only_alternatives": []
+}

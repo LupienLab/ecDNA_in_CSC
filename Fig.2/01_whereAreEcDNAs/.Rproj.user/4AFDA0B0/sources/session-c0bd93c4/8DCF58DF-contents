@@ -1,0 +1,5 @@
+
+
+peaks <- RunMACS2(frags, sampleName = sampleNames,
+                  pathToMacs2 = "/home/ww/miniconda3/envs/macs/bin/macs2")
+

@@ -1,0 +1,26 @@
+{
+    "id": "A06D6D5F",
+    "path": "~/Documents/gitHub/nature/Fig.4/04_CRISPR-Cas9/01_qBF_oncogene.R",
+    "project_path": "01_qBF_oncogene.R",
+    "type": "r_source",
+    "hash": "2292307362",
+    "contents": "",
+    "dirty": false,
+    "created": 1757614848264.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "46,0",
+        "scrollLine": "17"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757986372,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757986372052,
+    "read_only": false,
+    "read_only_alternatives": []
+}

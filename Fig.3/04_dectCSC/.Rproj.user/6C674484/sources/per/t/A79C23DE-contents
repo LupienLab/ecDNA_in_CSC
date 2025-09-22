@@ -1,0 +1,43 @@
+rm(list = ls())
+
+library(irlba)
+library(Matrix)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+set.seed(17)
+
+gbm_peak_cell_matrix <- readRDS("./outputs/gbm_peak_cell_matrix.rds")
+gsc_peak_cell_matrix <- readRDS("./outputs/gsc_peak_cell_matrix.rds")
+
+peak_cell_matrix <- cbind(gbm_peak_cell_matrix, gsc_peak_cell_matrix)
+peak_cell_matrix@x[peak_cell_matrix@x > 0] <- 1
+
+dim(peak_cell_matrix)
+peak_cell_matrix <- peak_cell_matrix[-which(rowSums(peak_cell_matrix) == 0),]
+dim(peak_cell_matrix)
+
+# Perform PCA using irlba (computing the first 5 principal components)
+pca_result <- irlba(t(peak_cell_matrix), nv = 5, scale. = TRUE)
+
+# The result will contain the following:
+# u - left singular vectors (principal components)
+# d - singular values
+# v - right singular vectors (loadings)
+# Principal components (scores)
+principal_components <- pca_result$u %*% diag(pca_result$d)
+
+#~~~ vasulize the pca
+pca_df <- principal_components %>% as.data.frame() %>% {colnames(.) = c("PC1", "PC2", "PC3", "PC4", "PC5");.} %>% dplyr::select(PC2, PC3) %>% 
+  mutate(barcode = colnames(peak_cell_matrix)) %>% mutate(type = str_extract(barcode, "^[^#]+"), sample = str_extract(barcode, "(?<=#)[^#]+"))
+
+saveRDS(pca_df, file = paste0("outputs/pca_df.rds"))
+
+#~~~ visualize the pc results
+ggplot(pca_df, aes(x = PC2, y = PC3, color = type)) + theme_bw() + geom_point(size = 0.2) +
+scale_color_manual(values = c("GBM" = "red", "GSC" = "blue")) + 
+theme(axis.text.x = element_text(colour = "black"), axis.text.y = element_text(colour = "black"), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+ 
+
+
+  

@@ -1,0 +1,62 @@
+rm(list = ls())
+
+library(data.table)
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+
+id <-  "G958"
+diffPeak <- fread(paste0("./outputs/diffPeak.overall.bed")) %>% as.data.frame() %>% filter(log2FoldChange >= 2) %>%
+tidyr::separate(peak, sep = ":", into = c("chr","coord")) %>% tidyr::separate(coord, sep = "-", into = c("start", "end")) %>%
+mutate(start = as.integer(start)) %>% mutate(end = as.integer(end)) 
+
+#--- up peaks 
+upPeak <- diffPeak %>% filter(change == "Up") %>% select(chr, start, end) %>% filter(!duplicated(.))
+
+fileDir <- list.files(paste0("./inputs/ecDNA/"))
+interval <- fread(paste0("./inputs/ecDNA/", fileDir[1])) %>% as.data.frame() %>% magrittr::set_colnames(c("chr", "start", "end")) %>% mutate(sample = sub("_.*", "", fileDir[1]))
+
+for(i in 2:length(fileDir)){
+  tmpInterval <- fread(paste0("./inputs/ecDNA/", fileDir[i])) %>% as.data.frame() %>% magrittr::set_colnames(c("chr", "start", "end")) %>% mutate(sample = sub("_.*", "", fileDir[i]))
+  interval <- rbind(interval, tmpInterval)
+}
+
+peaks.interval <- bedtoolsr::bt.intersect(upPeak, interval, wa = T, wb = T) %>% 
+magrittr::set_colnames(c("chr", "start", "end", "chr_interval", "start_interval", "end_interval", "sample"))
+
+#--- plot 
+slices <- c(dim(peaks.interval)[1], (dim(upPeak)[1] - dim(peaks.interval)[1]))
+lbls <- c("peaks within ecDNA", "peaks without ecDNA")
+df <- data.frame(category = lbls, count = slices) %>% mutate(percentage = count/sum(count) *100)
+pie(slices, labels = paste0(slices, "(", round(slices/sum(slices), 4)*100, "%)"), col = c("#fee0d2", "white"))
+library(ggplot2)
+ggplot(df, aes(x = 2, y = count, fill = category)) +
+  geom_bar(stat = "identity", width = 0.75, color = "white") +
+  coord_polar(theta = "y", start = pi/0.3431) +
+  xlim(0.5, 2.5) + # Adjust the inner radius for the donut chart
+  scale_fill_manual(values = c("peaks within ecDNA" = "#d94801", "peaks without ecDNA" = "grey")) +
+  theme_void() + # Remove background and axis
+  theme(legend.position = "right") + # Adjust legend position
+  geom_text(aes(label = paste0(count, "\n", round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5)) + # Add percentage labels
+  theme(plot.title = element_text(hjust = 0.5))
+
+ #--- narrowPeak + peaks within ecDNA regions
+peaks.interval <- peaks.interval %>% filter(sample == id) %>% select(chr, start, end)
+narrowPeak <- fread(paste0("./inputs/narrowPeak/", id, ".cancell_peaks.narrowPeak"), header = F) %>% select(V1, V2, V3) %>% magrittr::set_colnames(c("chr", "start", "end"))
+peaks.interval <- bedtoolsr::bt.intersect(peaks.interval, narrowPeak, wa = T, wb = T, nonamecheck = T) %>% 
+select(V4, V5, V6) %>% magrittr::set_colnames(c("chr", "start", "end")) %>% filter(!duplicated(.))
+write.table(peaks.interval, file = paste0( "./outputs/", id, ".peaks.interval.bed"), row.names = F, col.names = F, sep = "\t", quote = F)
+
+
+#--- narrowPeak - peaks within ecDNA regions
+peaks.narrow <- bedtoolsr::bt.intersect(upPeak, narrowPeak, wa = T, wb = T, nonamecheck = T) %>% select(V4, V5, V6) %>% 
+magrittr::set_colnames(c("chr", "start", "end")) %>% filter(!duplicated(.))
+peaks.narrow <- anti_join(peaks.narrow, peaks.interval, by = c("chr", "start", "end"))
+write.table(peaks.narrow, file = paste0("./outputs/", id, ".peaks.narrow.bed"), row.names = F, col.names = F, sep = "\t", quote = F)
+
+
+dim(peaks.interval)
+dim(peaks.narrow)
+
+

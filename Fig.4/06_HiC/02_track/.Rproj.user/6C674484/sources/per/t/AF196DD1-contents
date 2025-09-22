@@ -1,0 +1,49 @@
+rm(list = ls())
+
+library(grid)
+library(tidyr)
+library(dplyr)
+library(data.table)
+library(plotgardener)
+library(org.Hs.eg.db)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(BSgenome.Hsapiens.UCSC.hg38)
+
+#--- loci of interest - MYCN: chr2: 13071799 - 18831798
+
+id = "G523"
+chr = "chr2"
+start = 13071799
+end = 18831798
+res = 10000
+
+arc <- fread(paste0("/Users/cpan/Documents/ChIP/", id, "/enriched_pixels_", res, ".bedpe")) %>% dplyr::select(chr1, x1, x2, chr2, y1, y2) %>% 
+  {colnames(.) = c("chrom1", "start1", "end1", "chrom2", "start2", "end2");.} %>%
+  mutate(chrom1 = paste0("chr", chrom1), chrom2 = paste0("chr", chrom2))
+
+pdf(paste0("./outputs/", id, "_MYCN_", res, ".pdf"), width = 6, height = 4) # width = 6
+
+pageCreate(width = 5, height = 5, default.units = "inches", showGuides = F, xgrid = 0, ygrid = 0)
+
+plotPairsArches(
+  data = arc,
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  x = 0.5, y = 2.5, width = 4, height = 0.25,
+  just = c("left", "top"), default.units = "inches",
+  fill = "black", linecolor = "black", flip = TRUE
+)
+
+plotGenes(
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  fontsize = 8,
+  x = 0.5, y = 3.05, width = 4, height = 0.5,
+  fontcolor = c("blue", "blue"),
+  fill = c("black", "black"),
+  strandLabels = TRUE,
+  stroke = 0.01,
+  just = c("left", "top"), default.units = "inches"
+)
+
+dev.off()

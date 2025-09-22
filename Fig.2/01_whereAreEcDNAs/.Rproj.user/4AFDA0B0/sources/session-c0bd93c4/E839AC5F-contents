@@ -1,0 +1,22 @@
+frags
+blacklist <- genomeAnnotation$blacklist
+
+peak2 <- peaks
+
+
+
+CNVsProj <- proj
+cellNames <- sub(".*#", "", CNVsProj$cellNames)
+peaks <- CNVsProj@peaks
+fragments <- CNVsProj@sampleColData$fragfiles
+#return(as.list(environment()))
+fragment_data <- fread(fragments, header = FALSE)
+# 给列命名，第四列是细胞名称
+colnames(fragment_data) <- c("chrom", "start", "end", "cell", "score")
+
+frags <- GRanges(
+  seqnames = fragment_data$chrom,
+  ranges   = IRanges(start = fragment_data$start, end = fragment_data$end),
+  RG       = fragment_data$cell
+)
+frags <- frags[frags$RG %in% cellNames]

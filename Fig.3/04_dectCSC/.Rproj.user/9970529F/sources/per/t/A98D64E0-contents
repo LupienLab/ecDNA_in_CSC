@@ -1,0 +1,61 @@
+rm(list = ls())
+
+library(irlba)
+library(Matrix)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+set.seed(1)
+
+peak_by_cell_GBM <- readRDS("./outputs/peak_by_cell_GBM.rds")
+peak_by_cell_GSC <- readRDS("./outputs/peak_by_cell_GSC.rds")
+dim(peak_by_cell_GBM)
+dim(peak_by_cell_GSC)
+
+peak_by_cell_matrix <- cbind(peak_by_cell_GBM, peak_by_cell_GSC)
+peak_by_cell_matrix@x[peak_by_cell_matrix@x > 0] <- 1
+
+#~~~ transpose matrix to have cells as rows
+mat_t <- t(peak_by_cell_matrix)
+
+#~~~ perform PCA using irlba (computing the first 5 principal components)
+pca_result <- irlba(mat_t, nv = 5)
+
+#~~~ compute variance explained
+singular_values <- pca_result$d
+variance_explained <- singular_values^2 / sum(singular_values^2)
+percent_explained <- variance_explained * 100
+
+percent_explained
+names(percent_explained) <- paste0("PC", 1:length(percent_explained))
+print(round(percent_explained, 2))
+
+# The result will contain the following:
+# u - left singular vectors (principal components)
+# d - singular values
+# v - right singular vectors (loadings)
+# Principal components (scores)
+principal_components <- pca_result$u %*% diag(pca_result$d)
+
+#~~~ 
+pca_result_df <- principal_components %>% as.data.frame() %>% {colnames(.) = c("PC1", "PC2", "PC3", "PC4", "PC5");.} %>% dplyr::select(PC2, PC3) %>% 
+  mutate(barcode = colnames(peak_by_cell_matrix)) %>% mutate(type = str_extract(barcode, "(?<=_)[A-Z]"), sample = str_extract(barcode, "^[^#]+"))
+
+
+saveRDS(pca_result_df, file = paste0("outputs/pca_result_df.rds"))
+
+#~~~ plot 
+pdf(paste0("./outputs.overlapping/pca.pdf"), width = 3.5, height = 3.5)
+ggplot(pca_result_df, aes(x = PC2, y = PC3, colour = type)) +
+  geom_point(size = 0.25) +
+  theme_bw() +
+  scale_color_manual(values = c("T" = "red", "L" = "purple"), name = "cell type", labels = c("GBM", "CSC")) +
+  labs(title = "",
+       x = paste0("PC2: ", round(percent_explained[2], 1), "% variance"),
+       y = paste0("PC3: ", round(percent_explained[3], 1), "% variance")) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10, colour = "black"), 
+        axis.text.y = element_text(size = 10, colour = "black"))
+dev.off()

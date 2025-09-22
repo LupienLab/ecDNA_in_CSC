@@ -1,0 +1,125 @@
+# Required libraries
+library(MASS)    # For kde2d
+library(ggplot2) # For visualization
+library(dplyr)   # For data manipulation
+
+set.seed(123)
+
+# Load PCA data
+pca_df <- readRDS(file = paste0("outputs/pca_df.rds"))
+gbm_pca <- pca_df %>% filter(type == "GBM")
+gsc_pca <- pca_df %>% filter(type == "GSC")
+
+data1 <- pca_df %>% filter(type == "GBM")
+data2 <- pca_df %>% filter(type == "GSC")
+
+dens1 <- kde2d(data1$PC2, data1$PC3, n = 100)
+dens2 <- kde2d(data2$PC2, data2$PC3, n = 100)
+
+# 2. Define a function to find the density at given points
+find_density <- function(x, y, dens) {
+  x_id <- findInterval(x, dens$x)
+  y_id <- findInterval(y, dens$y)
+  dens$z[cbind(x_id, y_id)]
+}
+
+# 3. Combine the two datasets to check for overlap points
+combined_data <- rbind(data1, data2)
+
+# 4. Calculate density values for each point from both density fields
+combined_data$density1 <- mapply(find_density, 
+                                 combined_data$PC2, combined_data$PC3, 
+                                 MoreArgs = list(dens = dens1))
+combined_data$density2 <- mapply(find_density, 
+                                 combined_data$PC2, combined_data$PC3, 
+                                 MoreArgs = list(dens = dens2))
+
+# 5. Identify overlap points where both densities exceed their thresholds
+# (Here, we use the 50th percentile as an example threshold)
+threshold1 <- quantile(dens1$z, probs = 0.65)
+threshold2 <- quantile(dens2$z, probs = 0.65)
+
+overlap_points <- subset(combined_data, density1 >= threshold1 & density2 >= threshold2)
+saveRDS(overlap_points, file = paste0("outputs/overlap_points.rds"))
+
+
+#~~~ overlapping for GBM and GSC
+pdf(paste0("./overlapping/PCA_GBM_GSC.pdf"), width = 5, height = 5)
+p0 <- ggplot(combined_data, aes(x = PC2, y = PC3)) +
+  theme_bw() +
+  #geom_point(aes(color = "All Points"), alpha = 1, size = 0.25, show.legend = TRUE) +
+  stat_density_2d(data = gsc_pca, aes(x = PC2, y = PC3, color = "GSC"), geom = "contour", bins = 150) +
+  stat_density_2d(data = gbm_pca, aes(x = PC2, y = PC3, color = "GBM"), geom = "contour", bins = 150) +
+  geom_point(data = overlap_points, aes(x = PC2, y = PC3, color = "CSC"), size = 0.15) +
+  scale_color_manual(values = c("GBM" = "red", "GSC" = "blue", "CSC" = "orange")) +
+  labs(x = "PC2", y = "PC3", color = "Cell type") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10, colour = "black"), 
+        axis.text.y = element_text(size = 10, colour = "black"))
+p0
+dev.off()
+
+#~~~ overlapping for GBM 
+pdf(paste0("./overlapping/PCA_GBM.pdf"), width = 5, height = 5)
+p0 <- ggplot(combined_data, aes(x = PC2, y = PC3)) +
+  theme_bw() +
+  #geom_point(aes(color = "All Points"), alpha = 1, size = 0.25, show.legend = TRUE) +
+  stat_density_2d(data = gsc_pca, aes(x = PC2, y = PC3, color = "GSC"), geom = "contour", bins = 150) +
+  stat_density_2d(data = gbm_pca, aes(x = PC2, y = PC3, color = "GBM"), geom = "contour", bins = 150) +
+  geom_point(data = overlap_points %>% dplyr::filter(type == "GBM"), aes(x = PC2, y = PC3, color = "CSC"), size = 0.15) +
+  scale_color_manual(values = c("GBM" = "red", "GSC" = "blue", "CSC" = "orange")) +
+  labs(x = "PC2", y = "PC3", color = "Cell type") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10, colour = "black"), 
+        axis.text.y = element_text(size = 10, colour = "black"))
+p0
+dev.off()
+
+#~~~ overlapping for GSC 
+pdf(paste0("./overlapping/PCA_GSC.pdf"), width = 5, height = 5)
+p0 <- ggplot(combined_data, aes(x = PC2, y = PC3)) +
+  theme_bw() +
+  #geom_point(aes(color = "All Points"), alpha = 1, size = 0.25, show.legend = TRUE) +
+  stat_density_2d(data = gsc_pca, aes(x = PC2, y = PC3, color = "GSC"), geom = "contour", bins = 150) +
+  stat_density_2d(data = gbm_pca, aes(x = PC2, y = PC3, color = "GBM"), geom = "contour", bins = 150) +
+  geom_point(data = overlap_points %>% dplyr::filter(type == "GSC"), aes(x = PC2, y = PC3, color = "CSC"), size = 0.15) +
+  scale_color_manual(values = c("GBM" = "red", "GSC" = "blue", "CSC" = "orange")) +
+  labs(x = "PC2", y = "PC3", color = "Cell type") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10, colour = "black"), 
+        axis.text.y = element_text(size = 10, colour = "black"))
+p0
+dev.off()
+
+
+#~~~ overlapping for specific GBM tumor
+id = "A7TK"
+
+pdf(paste0("./overlapping/", id, "_", "PCA_GBM.pdf"), width = 5, height = 5)
+p0 <- ggplot(combined_data, aes(x = PC2, y = PC3)) +
+  theme_bw() +
+  #geom_point(aes(color = "All Points"), alpha = 1, size = 0.25, show.legend = TRUE) +
+  stat_density_2d(data = gsc_pca, aes(x = PC2, y = PC3, color = "GSC"), geom = "contour", bins = 150) +
+  stat_density_2d(data = gbm_pca, aes(x = PC2, y = PC3, color = "GBM"), geom = "contour", bins = 150) +
+  geom_point(data = gbm_pca %>% dplyr::filter(type == "GBM" & sample == id), aes(x = PC2, y = PC3, color = "CSC"), size = 0.15) +
+  scale_color_manual(values = c("GBM" = "red", "GSC" = "blue", "CSC" = "orange")) +
+  labs(x = "PC2", y = "PC3", color = "Cell type") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(size = 10, colour = "black"), 
+        axis.text.y = element_text(size = 10, colour = "black"))
+p0
+dev.off()
+
+
+
+legend <- cowplot::get_legend(p0)
+grid::grid.newpage()
+grid::grid.draw(legend)
+
+table(overlap_points$type, overlap_points$sample)
+color = c("#E6E6FA", "#C8A2C8", "#8A2BE2", "#9966CC", "#7851A9", "#4B0082", "#8E4585")
+

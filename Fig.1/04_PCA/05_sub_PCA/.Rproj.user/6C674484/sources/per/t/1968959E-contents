@@ -1,0 +1,66 @@
+#--- workflow of differential peak analysis: union (i.e., consensus) peak -> featureCounts -> DEseq2
+rm(list = ls())
+
+library(tidyr)
+library(dplyr)
+library(DESeq2)
+library(ggplot2)
+library(Rsubread)
+library(data.table)
+"%ni%" <- Negate("%in%")
+
+id = "G958"
+sample = c("A7TK", "AA9S", "G797", "G837", "G900", "G933", "G946", "G958") 
+sample = sample[sample %ni% id]
+
+unionPeak <- fread(paste0("/Users/cpan/OneDrive/rawdata/scATAC/unionPeak/malign/results/GBM.unionPeakSet.bed"), header = T) %>% 
+mutate(geneID = 1:dim(.)[1]) %>% mutate(chr = seqnames, start = start, end = end, strand = strand,  sample = GroupReplicate) %>% 
+dplyr::select(geneID, chr, start, end, strand, sample) %>% filter(chr != "chrY")
+
+#~~~ generate peak-read matrix using featureCpunts function 
+peakCount <- featureCounts(paste0("/Users/cpan/OneDrive/rawdata/scATAC/bam/", id, ".maligncell.bam"), annot.ext = unionPeak,  nthreads = 4, annot.inbuilt = "hg38", isPairedEnd = T)
+readCount <- data.frame(count = as.numeric(peakCount$counts)) %>% magrittr::set_colnames(paste0(id))
+
+for(i in 1:length(sample)){
+  peakCount <- featureCounts(paste0("/Users/cpan/OneDrive/rawdata/scATAC/bam/", sample[i], ".maligncell.bam"), annot.ext = unionPeak,  nthreads = 4, annot.inbuilt = "hg38", isPairedEnd = T)
+  readCount$tmp <- as.numeric(peakCount$counts)
+  colnames(readCount)[dim(readCount)[2]] <- sample[i]
+}
+
+readCount <- readCount %>% magrittr::set_rownames(paste0(unionPeak$chr, ":", unionPeak$start, "-", unionPeak$end)) 
+colnames(readCount) <- sub("\\.maligncell", "", colnames(readCount))
+
+saveRDS(readCount, file = paste0("./outputs/GBM.malign.readCount.rds"))
+
+#~~~ peak differential analysis using DEseq2 **********************************---#
+count <- readRDS(paste0("./outputs/GBM.malign.readCount.rds"))
+
+group1 <- c("A7TK", "G933", "G946", "G958") # ecDNA-positive group
+group2 <- c("AA9S", "G797", "G837", "G900") # ecDNA-negative group
+
+count <- count[ ,c(group1, group2)]
+
+#~~~ set condition
+condition <- factor(ifelse(colnames(count) %in% group1, 'ecDNA', 'control'))
+
+#~~~ peak filter
+keepPeak <- rowSums(edgeR::cpm(count) > 0) > 0
+count <- count[keepPeak, ]
+dim(count) 
+
+#~~~ dds matrix
+dds <- DESeqDataSetFromMatrix(count, DataFrame(condition), design = ~ condition) 
+vsd <- vst(dds, blind = F)
+plotPCA(vsd)
+
+pca <- plotPCA(vsd, intgroup = c("condition"), returnData = T) #+ theme(panel.border = element_rect(colour = "black", fill = NA)) + theme_bw()
+
+# PC1 vs PC2 scatter plot
+ggplot(pca, aes(x = PC1, y = PC2, color = condition)) + 
+  geom_point( size = 2, aes(color = condition)) + theme_bw() + 
+  geom_text(aes(label = name), color = "black", hjust = 1.5, vjust = 1.5) +
+  scale_color_manual(values = c("ecDNA" = "red", "control" = "blue")) +
+  xlab("PC1, 46% variance") + ylab("PC2, 22% variance") +
+  theme(panel.border = element_rect(colour = "black", fill = NA), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank()) 
+
+

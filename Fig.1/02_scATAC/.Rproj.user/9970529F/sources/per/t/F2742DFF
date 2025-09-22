@@ -1,0 +1,26 @@
+{
+    "id": "F2742DFF",
+    "path": "~/Documents/gitHub/nature/Fig.1/scATAC/05_cscProject/03_violin_ecDNACSC.R",
+    "project_path": "05_cscProject/03_violin_ecDNACSC.R",
+    "type": "r_source",
+    "hash": "92113049",
+    "contents": "",
+    "dirty": false,
+    "created": 1757105677868.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "77,35",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757340670,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757340670,
+    "read_only": false,
+    "read_only_alternatives": []
+}

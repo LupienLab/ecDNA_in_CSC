@@ -1,0 +1,57 @@
+# Required libraries
+library(MASS)    # For kde2d
+library(ggplot2) # For visualization
+library(dplyr)   # For data manipulation
+
+set.seed(123)
+
+# Load PCA data
+pca_df <- readRDS(file = paste0("outputs/pca_df.rds"))
+
+gbm_pca <- pca_df %>% filter(type == "GBM")
+gsc_pca <- pca_df %>% filter(type == "GSC")
+
+data1 <- pca_df %>% filter(type == "GBM")
+data2 <- pca_df %>% filter(type == "GSC")
+
+dens1 <- kde2d(data1$PC2, data1$PC3, n = 100)
+dens2 <- kde2d(data2$PC2, data2$PC3, n = 100)
+
+# 2. Define a function to find the density at given points
+find_density <- function(x, y, dens) {
+  x_id <- findInterval(x, dens$x)
+  y_id <- findInterval(y, dens$y)
+  dens$z[cbind(x_id, y_id)]
+}
+
+# 3. Combine the two datasets to check for overlap points
+combined_data <- rbind(data1, data2)
+
+# 4. Calculate density values for each point from both density fields
+combined_data$density1 <- mapply(find_density, 
+                                 combined_data$PC2, combined_data$PC3, 
+                                 MoreArgs = list(dens = dens1))
+combined_data$density2 <- mapply(find_density, 
+                                 combined_data$PC2, combined_data$PC3, 
+                                 MoreArgs = list(dens = dens2))
+
+# 5. Identify overlap points where both densities exceed their thresholds
+# (Here, we use the 65th percentile as an example threshold)
+threshold1 <- quantile(dens1$z, probs = 0.65)
+threshold2 <- quantile(dens2$z, probs = 0.65)
+
+overlap_points <- subset(combined_data, density1 >= threshold1 & density2 >= threshold2)
+
+# 6. Plot the original data and highlight overlap points
+ggplot(combined_data, aes(x = PC2, y = PC3)) +
+  theme_bw() +
+  # add density contours for GSC
+  stat_density_2d(data = gsc_pca, aes(x = PC2, y = PC3, color = "GSC"), geom = "contour", bins = 50) +
+  # add density contours for GBM
+  stat_density_2d(data = gbm_pca, aes(x = PC2, y = PC3, color = "GBM"), geom = "contour", bins = 50) +
+  scale_color_manual(values = c("GBM" = "red", "GSC" = "blue")) +
+  labs(x = "PC2", y = "PC3", color = "Cell type") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(colour = "black"), axis.text.y = element_text(colour = "black"))
+
+

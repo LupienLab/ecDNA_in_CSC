@@ -1,0 +1,46 @@
+rm(list = ls())
+
+library(dplyr)
+library(tibble)
+library(readxl)
+library(ggplot2)
+library(ggrepel)
+library(reshape2)
+library(magrittr)
+library(data.table)
+
+qBF = read_excel("./inputs/GBM5KTKOqBF.xlsx", col_names = T) %>% as.data.frame() 
+TKOqBF = read_excel("./inputs/GBM5KTKOqBF.xlsx", col_names = T) %>% as.data.frame() 
+
+tfs <- c("OLIG2", "SOX2", "SOX8", "SOX9", "SOX5", "ASCL1", "NFIB", "SALL1", "KLF14", "KLF5", "POU3F3", "POU3F4")
+
+qBF <- qBF %>% filter(gene %in% tfs) %>% select(gene, G523, G549, G583, G620, G564, G567, G729) %>% column_to_rownames("gene")
+
+pheatmap::pheatmap(t(qBF), 
+                   cluster_rows = TRUE, 
+                   cluster_cols = FALSE,
+                   color = colorRampPalette(c("blue", "white", "red"))(50),
+                   main = "Enriched Motifs in Peaks Up in Cancer")
+
+
+
+crispr.df <- reshape2::melt(crispr, id.vars = "gene") %>% magrittr::set_colnames(c("gene", "cellline", "essentiality"))
+crispr.df$genelabels <- ifelse(crispr.df$cellline %in% c("G523", "G583"), ifelse(crispr.df$cellline %in% "G583", "G583", "G523"), "")
+crispr.df$genelabrrr <- ifelse(crispr.df$cellline %in% c("G549", "G620"), ifelse(crispr.df$cellline %in% "G620", "G620", "G549"), "")
+crispr.df$label <- paste(crispr.df$genelabels, crispr.df$genelabrrr, sep = "")
+
+#---- violin plot 
+p <- ggplot(crispr.df, aes(x = gene, y = essentiality, fill = gene)) + theme_bw() +
+  geom_violin(alpha = 0.5) +
+  geom_point(position = position_jitter(seed = 1, width = 0.1), data = crispr.df[-which(crispr.df$label %in% c("G523", "G583", "G549", "G620")), ], aes(x = gene, y = essentiality), colour="black") +
+  geom_point(position = position_jitter(seed = 1, width = 0.1), data = crispr.df[which(crispr.df$label %in% c("G523", "G583", "G549", "G620")), ],  aes(x = gene, y = essentiality), colour="red") + 
+  geom_text_repel(aes(label = label)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "purple") +
+  theme(legend.position = "none",
+        panel.grid = element_blank()) + 
+  xlab("") + ylab("Normalized Bayes Factor (BF) score") 
+
+p 
+
+
+

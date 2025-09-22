@@ -1,0 +1,42 @@
+rm(list = ls())
+
+library(ggplot2) 
+library(dplyr)  
+library(tidyr)
+library(stringr)
+library(VennDiagram)
+library(grid)
+library(data.table)
+
+id =  "G958"
+n = "1"
+
+fileDir <- list.files(paste0("/Users/cpan/Documents/scATAC/celltype/GBM/"))
+selectedcellFileDir <- grep("ecDNAcell\\.txt", fileDir, value = T)
+file_paths <- paste0("/Users/cpan/Documents/scATAC/celltype/GBM/", selectedcellFileDir)
+
+ids <- gsub(".*/(.*?)\\.ecDNAcell\\.txt$", "\\1", file_paths)
+ecDNA_list <- lapply(file_paths, function(path) {
+  fread(path, header = F, stringsAsFactors = F) %>% as.data.frame() %>% {colnames(.) = "barcode";.}
+})
+names(ecDNA_list) <- ids
+
+# load overlap data
+overlap_df <- readRDS(file = paste0("outputs/overlap_points.rds"))
+overlap_df <- overlap_df %>% dplyr::filter(type == "GBM") %>% tidyr::separate(barcode, into = c("type", "sample", "barcode"), sep = "#")
+stem_number_df <- table(overlap_df$sample) %>% as.data.frame() %>% {colnames(.) = c("sample", "count");.}
+
+stem_ecDNA_number_list <- lapply(seq_along(ecDNA_list), function(i) {
+  id <- sub("-\\d+$", "", names(ecDNA_list[i]))
+  cat("id: ", id, "\n")
+  tmp_df <- overlap_df %>% filter(sample == id) %>% dplyr::select(barcode)
+  number <- length(intersect(ecDNA_list[[i]]$barcode, tmp_df$barcode))
+  return(number)
+})
+names(stem_ecDNA_number_list) <- names(ecDNA_list)
+
+stem_ecDNA_number_df <- do.call(rbind, stem_ecDNA_number_list) %>% as.data.frame() %>% tibble::rownames_to_column(var = "sample") %>% {colnames(.) = c("sample", "number");.}
+stem_ecDNA_number_df <- stem_ecDNA_number_df %>% mutate(sample_base = str_extract(sample, "^[^-]+"))  
+
+merged_df <- left_join(stem_ecDNA_number_df, stem_number_df, by = c("sample_base" = "sample")) %>% mutate(percentage = number/count, diff = count - number)
+merged_df <- merged_df %>% dplyr::select(sample, number, count, percentage, diff)

@@ -1,0 +1,23 @@
+source("librarys.R")
+
+sampleNames <- "G598"
+addWhereAreCNVsGenome("hg38")
+fragpath <- './inputs/cpan.fragments.tsv.gz'
+barcodes <- readLines("inputs/filteredcells.txt")
+
+frags <- CreateFragmentObject(path = fragpath, cells = barcodes)
+
+peaks <- RunMACS2(frags, sampleName = sampleNames,
+                  pathToMacs2 = "/home/ww/miniconda3/envs/macs/bin/macs2")
+
+
+CNVsProj <- CNVsProject(
+  fragments = frags,
+  peak = peaks,
+  sampleNames = sampleNames,
+  geneAnnotation = getGeneAnnotation(),
+  genomeAnnotation = getGenomeAnnotation(),
+)
+
+peakMat <- getPeakScoreMat(proj = CNVsProj)
+

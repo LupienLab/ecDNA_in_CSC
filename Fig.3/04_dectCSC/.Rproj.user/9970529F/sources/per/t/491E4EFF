@@ -1,0 +1,26 @@
+{
+    "id": "491E4EFF",
+    "path": "~/Documents/gitHub/nature/Fig.3/04_dectCSC/03_integrate_SVD.R",
+    "project_path": "03_integrate_SVD.R",
+    "type": "r_source",
+    "hash": "3405455704",
+    "contents": "",
+    "dirty": false,
+    "created": 1757443401433.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "79,0",
+        "scrollLine": "74"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757551568,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757551568052,
+    "read_only": false,
+    "read_only_alternatives": []
+}

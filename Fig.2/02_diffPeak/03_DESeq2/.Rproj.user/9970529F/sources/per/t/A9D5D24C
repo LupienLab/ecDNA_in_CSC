@@ -1,0 +1,26 @@
+{
+    "id": "A9D5D24C",
+    "path": "~/Documents/gitHub/nature/Fig.2/02_diffPeak/03_DESeq2/02_foldChange.R",
+    "project_path": "02_foldChange.R",
+    "type": "r_source",
+    "hash": "1507121109",
+    "contents": "",
+    "dirty": false,
+    "created": 1757612708152.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "45,0",
+        "scrollLine": "31"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757967675,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757967675103,
+    "read_only": false,
+    "read_only_alternatives": []
+}

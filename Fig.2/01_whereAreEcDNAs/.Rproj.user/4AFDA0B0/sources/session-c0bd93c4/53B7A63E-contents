@@ -1,0 +1,11 @@
+# 生成伪集群
+samtools view -D CB:./G958.outputs/filteredCell/filteredcells.txt -@ 12 -o G958.filter.bam ./inputs/G958/possorted_bam.bam
+samtools index G958.filter.bam
+
+# 使用MACS2调用峰值
+macs2 callpeak -t G958.filter.bam -n G958 --outdir macs2 --nomodel --shift 100 --ext 200 --qval 5e-2 -B --SPMR
+
+
+"./G958.outputs/possorted_bam.bam"
+"./G958.outputs/filteredCell/filteredcells.txt"
+"./inputs/G958/possorted_bam.bam"

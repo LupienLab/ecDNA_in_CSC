@@ -1,0 +1,71 @@
+#******** Chapter 1: create project ********#
+
+rm(list = ls())
+
+id = "G797"
+
+library(ArchR) # 1.0.2  package.version("ArchR")
+library(Seurat) # 4.1.1
+library(data.table)
+library(ggplot2)
+library(Matrix)
+library(dplyr)
+
+addArchRGenome("hg38")
+addArchRThreads(threads = floor(parallel::detectCores()/2), force = F)
+inputFiles <- getInputFiles(paths = "/Users/cpan/Documents/scATAC/fragment/")
+inputFiles <- inputFiles[which(names(inputFiles) == id)]
+
+ArrowFiles <- createArrowFiles(
+  inputFiles = inputFiles,
+  sampleNames = names(inputFiles),
+  minTSS = 5,
+  minFrags = 3000, 
+  addTileMat = TRUE,
+  addGeneScoreMat = TRUE,
+  force = FALSE
+)
+
+doubScores <- addDoubletScores(
+  input = ArrowFiles,
+  k = 10,
+  knnMethod = "UMAP",
+  LSIMethod = 1
+)
+
+proj <- ArchRProject(
+  ArrowFiles = ArrowFiles,
+  outputDirectory = paste0("outputs.", id),
+  copyArrows = FALSE,
+  geneAnnotation = getGeneAnnotation(),
+  genomeAnnotation = getGenomeAnnotation(),
+  showLogo = TRUE,
+  threads = getArchRThreads()
+)
+
+proj <- filterDoublets(proj)
+
+proj.cluster <- addIterativeLSI(proj, useMatrix = "TileMatrix", name = "IterativeLSI", force = T) %>%
+addClusters(., reducedDims = "IterativeLSI", force = T) %>% addUMAP(., reducedDims = "IterativeLSI", force = T)
+saveRDS(proj.cluster, file = paste0("./outputs.", id, "/", id, ".proj.rds"))
+
+filtercell <- str_replace(proj.cluster$cellNames, paste0(id, "#"), "")
+write.table(filtercell, file = paste0("./outputs.", id, "/", id, ".filtercell.txt"), row.names = F, col.names = F, quote = F)
+
+normalcell <- fread("/Users/cpan/Documents/scATAC/ArchR/results.group/normalcell.txt", header = F, stringsAsFactors = F) %>% as.data.frame() %>% {colnames(.) = c("barcode");.}
+normalcell <- normalcell %>% filter(grepl(id, barcode)) %>% mutate(barcode = sub(paste0(id,"#"), "", barcode)) 
+write.table(normalcell$barcode, file = paste0("./outputs.", id, "/", id, ".normalcell.txt"), row.names = F, col.names = F, quote = F)
+
+maligncell <- setdiff(filtercell, normalcell$barcode) 
+write.table(maligncell, file = paste0("./outputs.", id, "/", id, ".maligncell.txt"), row.names = F, col.names = F, quote = F)
+
+
+#>>> TSS = 5, Frags = 3000 <<<#
+#--- A7TK:  1942  1905
+#--- AA9S:  1541  1518
+#--- G958:  7622  7042
+#--- G946: 10120  9096 
+#--- G933:  4998  4749
+#--- G900:  2908  2824 
+#--- G837:  4697  4477
+#--- G797:  8561  7829

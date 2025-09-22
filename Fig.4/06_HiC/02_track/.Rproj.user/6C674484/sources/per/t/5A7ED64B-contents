@@ -1,0 +1,110 @@
+rm(list = ls())
+
+library(grid)
+library(tidyr)
+library(dplyr)
+library(data.table)
+library(plotgardener)
+library(org.Hs.eg.db)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(BSgenome.Hsapiens.UCSC.hg38)
+
+id = "G523"
+
+#~~~ chr7:54850756-55232892; 
+chr = "chr7"
+start = 54850756
+end = 55232892
+
+hic_file <- paste0("/Users/cpan/Downloads/", id, "_inter_30.hic")
+contact_matrix <- straw(
+  norm = "NONE",    # Normalization method: "NONE", "KR", "VC", "VC_SQRT"
+  fname = hic_file, 
+  "7",  "7",        # Specify chromosome(s)
+  unit = "BP",      # "BP" for base-pair resolution
+  binsize = 10000   # Bin size (must match available resolutions)
+)
+
+#~~~ enhancer regions: chr7:54887306-54890290
+#~~~ EGFR promoter regions: chr7:55018000-55019500
+
+enhancer <- data.frame(chr = "chr7", start = "54887306", end = "54890290")
+promoter <- data.frame(chr = "chr7", start = "55018000", end = "55019500")
+
+loop <- fread(paste0("/Users/cpan/Documents/HiC/", id, "/enriched_pixels_5000.bedpe")) %>% as.data.frame() %>% dplyr::select(chr1, x1, x2, chr2, y1, y2) %>%
+  mutate(chr1 = paste0("chr", chr1)) %>% mutate(chr2 = paste0("chr", chr2)) %>% {colnames(.) = c("chrom1", "start1", "end1", "chrom2", "start2", "end2");.}
+
+enhancer_loop_1 <- bedtoolsr::bt.intersect(loop, enhancer, wa = T, wb = F)
+enhancer_loop_2 <- bedtoolsr::bt.intersect(loop %>% dplyr::select(chrom2, start2, end2, chrom1, start1, end1), enhancer, wa = T, wb = F)
+enhancer_loop <- rbind(enhancer_loop_1, enhancer_loop_2)
+
+promoter_loop_1 <- bedtoolsr::bt.intersect(loop, promoter, wa = T, wb = F)
+promoter_loop_2 <- bedtoolsr::bt.intersect(loop %>% dplyr::select(chrom2, start2, end2, chrom1, start1, end1), promoter, wa = T, wb = F)
+promoter_loop <- rbind(promoter_loop_1, promoter_loop_2)
+
+#~~~ create a plotgardener page
+pageCreate(width = 5, height = 5, default.units = "inches", showGuides = F, xgrid = 0, ygrid = 0)
+
+plotHicTriangle(
+  data = contact_matrix, 
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",  
+  palette = colorRampPalette(c("white", "orange", "red")), #colorRampPalette(brewer.pal(n = 5, "Reds")[-1]),
+  x = 0.5, y = 0.005, width = 4, height = 3,
+  just = c("left", "top"), default.units = "inches",
+  zrange = c(0, 7000), resolution = 10000)
+
+
+plotPairsArches(
+  data = loop,
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  x = 0.5, y = 3.0, width = 4, height = 0.25,
+  baseline.lwd = 0.1,
+  just = c("left", "top"), default.units = "inches",
+  fill = "white", linecolor = "blue", flip = TRUE
+)
+
+plotGenes(
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  fontsize = 8,
+  x = 0.5, y = 3.25, width = 4, height = 0.5,
+  fontcolor = c("blue", "blue"),
+  fill = c("black", "black"),
+  strandLabels = TRUE,
+  stroke = 0.01,
+  just = c("left", "top"), default.units = "inches"
+)
+
+plotPairsArches(
+  data = enhancer_loop,
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  x = 0.5, y = 3.5, width = 4, height = 0.25,
+  baseline.lwd = 0.05,
+  just = c("left", "top"), default.units = "inches",
+  fill = "white", linecolor = "orange", flip = TRUE
+)
+
+plotPairsArches(
+  data = promoter_loop,
+  chrom = chr, chromstart = start, chromend = end,
+  assembly = "hg38",
+  x = 0.5, y = 3.75, width = 4, height = 0.25,
+  baseline.lwd = 0.15,
+  just = c("left", "top"), default.units = "inches",
+  fill = "white", linecolor = "purple", flip = TRUE
+)
+
+
+
+
+#~~~ sox2 ChIP-seq data
+chip <- fread(paste0("/Users/cpan/Documents/su2cProj/track/inputs/", id, "/", id, "_Sox2_B_peaks.narrowPeak")) %>% as.data.frame() %>% 
+  {colnames(.) = c("chr", "start", "end", "peak_id", "score", "strand", "signal_value", "pValue", "qValue", "peak_length");.}
+
+loop_chip <- bedtoolsr::bt.intersect(chip, loop,  wa = T, wb = T)
+
+loop_chip <- bedtoolsr::bt.intersect(chip, loop %>% dplyr::select(chrom2, start2, end2),  wa = T, wb = T)
+

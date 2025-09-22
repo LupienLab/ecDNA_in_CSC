@@ -1,0 +1,26 @@
+{
+    "id": "2ADF9980",
+    "path": "~/Documents/gitHub/nature/Fig.4/04_CRISPR-Cas9/02_qBF_TF.R",
+    "project_path": "02_qBF_TF.R",
+    "type": "r_source",
+    "hash": "2727870996",
+    "contents": "",
+    "dirty": false,
+    "created": 1757614838048.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "44,0",
+        "scrollLine": "18"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1757986429,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1757986429305,
+    "read_only": false,
+    "read_only_alternatives": []
+}
